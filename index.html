@@ -54,7 +54,7 @@
 <body>
   <div id="hud">
     <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>F</strong>: Flashlight • <strong>M</strong>: Mute</div>
-    <div id="status">Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.</div>
+    <div id="status">Note: It is pitch black—find the flashlight deeper in the dark! Watch for glowing red eyes.</div>
   </div>
 
   <div id="banner"></div>
@@ -63,7 +63,7 @@
   <div id="overlay">
     <h1 id="overlay-title">3D Dungeon Labyrinth</h1>
     <p id="overlay-text">
-      <strong>Note: Find the flashlight.</strong> The dungeon begins in pitch darkness with glowing red spider eyes watching in the gloom. Pick up the flashlight, shine it on cobwebs and spiders, view the framed wall art, and reach <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).
+      <strong>Note: Find the flashlight.</strong> The dungeon begins in pitch darkness with glowing red spider eyes watching in the gloom. Search deeper for the flashlight, shine it on cobweb walls and spiders, view the full-wall art, and reach <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).
     </p>
     <div class="btn-row">
       <button id="start-btn">Enter the Dark</button>
@@ -97,11 +97,11 @@
 
     // Put your uploaded image filenames here (must match exact names in the repo)
     const ART_FILES = [
-  'art1.jpg',
-  'art2.jpg',
-  'art3.jpg',
-  'art4.jpg'
-];
+      'art1.jpg',
+      'art2.jpg',
+      'art3.jpg',
+      'art4.jpg'
+    ];
 
     // Synthesized Web Audio: Creepy Dungeon Drone + Victory Chime (no external audio files needed)
     class DungeonAudio {
@@ -281,13 +281,15 @@
     const WALL_H = 3.8;
     const PLAYER_R = 0.72;
     const SANCTUARY_RADIUS = 13.5;
-    const FLASHLIGHT_CELL = { r: 1, c: 3 };
 
-    // Fake-shortcut cobweb barriers placed in corridors; shine flashlight on them to clear
+    // Flashlight placed deeper into the maze rather than right near the start
+    const FLASHLIGHT_CELL = { r: 7, c: 9 };
+
+    // Cobweb walls blocking corridor tiles; shine flashlight on them to burn/clear
     const FAKE_SHORTCUT_WEBS = [
-      { r: 5, c: 3, hint: 'Fake Shortcut Web: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
-      { r: 9, c: 5, hint: 'Fake Shortcut Web: "Skip the long turn here!" — Shine your flashlight (F) to clear the deception.' },
-      { r: 13, c: 7, hint: 'Fake Shortcut Web: "Secret shortcut ahead!" — Shine your flashlight (F) to test what is real.' }
+      { r: 5, c: 3, hint: 'Spiderweb Wall: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
+      { r: 9, c: 5, hint: 'Spiderweb Wall: "Skip the long turn here!" — Shine your flashlight (F) to clear the web.' },
+      { r: 13, c: 7, hint: 'Spiderweb Wall: "Secret shortcut ahead!" — Shine your flashlight (F) to test what is real.' }
     ];
 
     const bannerEl = document.getElementById('banner');
@@ -383,18 +385,61 @@
       return new THREE.CanvasTexture(c);
     }
 
+    // Dense, high-contrast spiderweb wall texture so the barrier reads clearly in 3D
     function makeBarrierWebTexture() {
       const c = document.createElement('canvas');
-      c.width = 256; c.height = 256;
+      c.width = 512; c.height = 512;
       const ctx = c.getContext('2d');
-      ctx.clearRect(0, 0, 256, 256);
-      ctx.strokeStyle = 'rgba(241, 245, 249, 0.55)';
-      ctx.lineWidth = 2;
-      for (let i = -256; i <= 512; i += 32) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 256, 256); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(i + 256, 0); ctx.lineTo(i, 256); ctx.stroke();
+      ctx.clearRect(0, 0, 512, 512);
+
+      // Subtle translucent web sheet backing
+      ctx.fillStyle = 'rgba(203, 213, 225, 0.16)';
+      ctx.fillRect(0, 0, 512, 512);
+
+      // Concentric web hubs across the wall
+      const centers = [
+        { cx: 140, cy: 150, rMax: 165 },
+        { cx: 375, cy: 260, rMax: 175 },
+        { cx: 220, cy: 390, rMax: 150 }
+      ];
+
+      ctx.strokeStyle = 'rgba(248, 250, 252, 0.9)';
+      for (const hub of centers) {
+        const spokes = 14;
+        for (let s = 0; s < spokes; s++) {
+          const ang = (s / spokes) * Math.PI * 2;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(hub.cx, hub.cy);
+          ctx.lineTo(hub.cx + Math.cos(ang) * hub.rMax, hub.cy + Math.sin(ang) * hub.rMax);
+          ctx.stroke();
+        }
+        for (let ring = 22; ring <= hub.rMax; ring += 24) {
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          for (let s = 0; s <= spokes; s++) {
+            const ang = (s / spokes) * Math.PI * 2;
+            const sag = s % 2 === 0 ? 4 : -3;
+            const px = hub.cx + Math.cos(ang) * (ring + sag);
+            const py = hub.cy + Math.sin(ang) * (ring + sag);
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
       }
-      return new THREE.CanvasTexture(c);
+
+      // Cross-strands so the whole corridor opening looks woven shut
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.72)';
+      ctx.lineWidth = 2.2;
+      for (let i = -512; i <= 1024; i += 42) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 512, 512); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(i + 512, 0); ctx.lineTo(i, 512); ctx.stroke();
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
     }
 
     function makeFallbackArtTexture() {
@@ -432,7 +477,7 @@
     const loader = new THREE.TextureLoader();
     const fallbackArtTex = makeFallbackArtTexture();
     const artMaterials = ART_FILES.map((file) => {
-      const mat = new THREE.MeshStandardMaterial({ map: fallbackArtTex, roughness: 0.4 });
+      const mat = new THREE.MeshBasicMaterial({ map: fallbackArtTex });
       loader.load(
         file,
         (tex) => {
@@ -485,12 +530,13 @@
       side: THREE.DoubleSide,
       roughness: 0.8
     });
-    const barrierWebMat = new THREE.MeshStandardMaterial({
+    // MeshBasicMaterial keeps spiderweb walls clearly visible even before flashlight hits them
+    const barrierWebMat = new THREE.MeshBasicMaterial({
       map: makeBarrierWebTexture(),
       transparent: true,
+      opacity: 0.92,
       depthWrite: false,
-      side: THREE.DoubleSide,
-      roughness: 0.7
+      side: THREE.DoubleSide
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
 
@@ -586,17 +632,25 @@
       });
     }
 
+    // Full-wall artwork spanning from floor to ceiling across the wall face
     function mountArtworkOnWall(wx, wz, dirX, dirZ) {
       const mat = artMaterials[artIndex % artMaterials.length];
       artIndex++;
 
+      const panelW = CELL - 0.16;
+      const panelH = WALL_H - 0.12;
+
       const holder = new THREE.Group();
-      const frame = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.1, 0.08), frameMat);
-      const canvasMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), mat);
-      canvasMesh.position.z = 0.045;
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(panelW + 0.14, panelH + 0.14, 0.06), frameMat);
+      const canvasMesh = new THREE.Mesh(new THREE.PlaneGeometry(panelW, panelH), mat);
+      canvasMesh.position.z = 0.035;
       holder.add(frame, canvasMesh);
 
-      holder.position.set(wx + dirX * (CELL / 2 + 0.05), 1.85, wz + dirZ * (CELL / 2 + 0.05));
+      holder.position.set(
+        wx + dirX * (CELL / 2 + 0.04),
+        WALL_H / 2,
+        wz + dirZ * (CELL / 2 + 0.04)
+      );
       if (dirX === 1) holder.rotation.y = Math.PI / 2;
       if (dirX === -1) holder.rotation.y = -Math.PI / 2;
       if (dirZ === -1) holder.rotation.y = Math.PI;
@@ -615,7 +669,7 @@
           wall.position.set(x, WALL_H / 2, z);
           scene.add(wall);
 
-          if (!nearSanctuary && (r + c) % 4 === 0) {
+          if (!nearSanctuary && (r + c) % 3 === 0) {
             if (MAZE[r][c + 1] === 0) mountArtworkOnWall(x, z, 1, 0);
             else if (MAZE[r][c - 1] === 0) mountArtworkOnWall(x, z, -1, 0);
             else if (MAZE[r + 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, 1);
@@ -654,18 +708,40 @@
       }
     }
 
-    // Build fake-shortcut cobweb barriers
+    // Build visible spiderweb walls with a subtle silver rim light so you can spot them
     for (const cfg of FAKE_SHORTCUT_WEBS) {
       const wx = cfg.c * CELL;
       const wz = cfg.r * CELL;
-      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(CELL * 0.85, WALL_H * 0.78), barrierWebMat);
-      mesh.position.set(wx, WALL_H * 0.39, wz);
-      mesh.rotation.y = ((cfg.r + cfg.c) % 2) * (Math.PI / 2);
-      scene.add(mesh);
+      const group = new THREE.Group();
+
+      const webPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(CELL * 0.96, WALL_H * 0.92),
+        barrierWebMat
+      );
+      webPlane.position.y = WALL_H * 0.46;
+      group.add(webPlane);
+
+      // Subtle silk strands across the barrier so its silhouette stands out in 3D
+      const strandMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.45 });
+      for (let h = 0.65; h <= 3.1; h += 0.6) {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.92, 0.02, 0.02), strandMat);
+        strand.position.y = h;
+        group.add(strand);
+      }
+
+      group.position.set(wx, 0, wz);
+      group.rotation.y = ((cfg.r + cfg.c) % 2) * (Math.PI / 2);
+      scene.add(group);
+
+      const webGlow = new THREE.PointLight(0xe2e8f0, 1.6, 5.5, 1.8);
+      webGlow.position.set(wx, 2.0, wz);
+      scene.add(webGlow);
+
       shortcutBarriers.push({
         x: wx,
         z: wz,
-        mesh,
+        group,
+        glow: webGlow,
         cleared: false,
         burnProgress: 0,
         hint: cfg.hint,
@@ -710,11 +786,12 @@
       for (const b of shortcutBarriers) {
         b.cleared = false;
         b.burnProgress = 0;
-        b.mesh.visible = true;
-        b.mesh.scale.set(1, 1, 1);
+        b.group.visible = true;
+        b.group.scale.set(1, 1, 1);
+        b.glow.intensity = 1.6;
       }
 
-      document.getElementById('status').textContent = 'Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.';
+      document.getElementById('status').textContent = 'Note: It is pitch black—find the flashlight deeper in the dark! Watch for glowing red eyes.';
       audio.startCreepyMusic();
     }
 
@@ -725,11 +802,10 @@
       const dist = Math.hypot(toX, toZ);
       if (dist > maxDist || dist < 0.01) return false;
 
-      // Forward direction in XZ from yaw (-sin(yaw), -cos(yaw))
       const fwdX = -Math.sin(player.yaw);
       const fwdZ = -Math.cos(player.yaw);
       const dot = (toX / dist) * fwdX + (toZ / dist) * fwdZ;
-      return dot > 0.72; // ~44-degree cone
+      return dot > 0.72;
     }
 
     function canMoveTo(nx, nz) {
@@ -744,9 +820,8 @@
         }
       }
 
-      // Active fake-shortcut cobwebs block passage until burned away with flashlight
       for (const b of shortcutBarriers) {
-        if (!b.cleared && Math.hypot(nx - b.x, nz - b.z) < PLAYER_R + 0.75) {
+        if (!b.cleared && Math.hypot(nx - b.x, nz - b.z) < PLAYER_R + 0.85) {
           return false;
         }
       }
@@ -810,7 +885,6 @@
       const s = mini.width / MAZE.length;
       mctx.clearRect(0, 0, mini.width, mini.height);
 
-      // Flicker & jitter minimap when a spider is close
       if (nearSpider) {
         const jx = (Math.random() - 0.5) * 8;
         const jy = (Math.random() - 0.5) * 8;
@@ -832,10 +906,9 @@
         }
       }
 
-      // Draw uncleared fake-shortcut webs faintly on minimap
       for (const b of shortcutBarriers) {
         if (!b.cleared) {
-          mctx.fillStyle = 'rgba(226, 232, 240, 0.35)';
+          mctx.fillStyle = 'rgba(248, 250, 252, 0.55)';
           mctx.fillRect((b.x / CELL) * s, (b.z / CELL) * s, s, s);
         }
       }
@@ -898,7 +971,6 @@
         const distToPlayer = Math.hypot(sp.x - player.x, sp.z - player.z);
         if (distToPlayer < nearestSpiderDist) nearestSpiderDist = distToPlayer;
 
-        // Scatter away when hit by active flashlight beam
         if (isInFlashlightBeam(sp.x, sp.z, 11.5)) {
           sp.scatterTimer = 1.6;
         }
@@ -914,7 +986,6 @@
           if (canMoveTo(sp.x, sp.z + stepZ)) sp.z += stepZ;
           sp.group.rotation.y = Math.atan2(awayX, awayZ);
         } else {
-          // Gently drift back toward patrol origin
           sp.x += (sp.originX - sp.x) * Math.min(1, dt * 1.2);
           sp.z += (sp.originZ - sp.z) * Math.min(1, dt * 1.2);
           const patrol = Math.sin(t * 1.6 + sp.phase) * 0.55;
@@ -933,23 +1004,23 @@
       const nearSpider = !player.won && nearestSpiderDist < 4.6;
       audio.setSpiderProximityTension(nearSpider);
 
-      // Check fake-shortcut cobwebs: hint on proximity, burn/clear when shone with flashlight
       for (const b of shortcutBarriers) {
         if (b.cleared) continue;
         const d = Math.hypot(player.x - b.x, player.z - b.z);
-        if (d < 2.2 && now - b.lastHintTime > 4500) {
+        if (d < 2.3 && now - b.lastHintTime > 4500) {
           b.lastHintTime = now;
           showBanner(b.hint, 4200);
         }
-        if (isInFlashlightBeam(b.x, b.z, 7.5)) {
+        if (isInFlashlightBeam(b.x, b.z, 8.5)) {
           b.burnProgress += dt * 1.35;
           const scale = Math.max(0.05, 1 - b.burnProgress);
-          b.mesh.scale.set(scale, scale, 1);
+          b.group.scale.set(scale, scale, 1);
           if (b.burnProgress >= 1) {
             b.cleared = true;
-            b.mesh.visible = false;
+            b.group.visible = false;
+            b.glow.intensity = 0;
             audio.playBurnWebSound();
-            showBanner('Cobweb cleared by the φῶς (light) — path open!', 2800);
+            showBanner('Spiderweb wall cleared by the φῶς (light) — path open!', 2800);
           }
         }
       }
@@ -986,7 +1057,7 @@
             '<strong>Flashlight Found!</strong><br>Ψαλμοί (Psalms) 118:105: Your λόγος (word) is a λύχνος (lamp) to my feet and a φῶς (light) to my path. Press <strong>F</strong> to toggle.',
             5500
           );
-          document.getElementById('status').textContent = 'Flashlight ON (Press F) — Shine on spiders & cobwebs • Find OvertPsyops.AI • @TLTHE5TH';
+          document.getElementById('status').textContent = 'Flashlight ON (Press F) — Shine on spiderweb walls & spiders • Find OvertPsyops.AI • @TLTHE5TH';
         }
 
         const distToExit = Math.hypot(player.x - exitPos.x, player.z - exitPos.z);
