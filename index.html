@@ -11,7 +11,7 @@
       position: fixed; top: 14px; left: 14px; z-index: 10;
       background: rgba(6, 8, 12, 0.85); border: 1px solid rgba(255,255,255,0.16);
       padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.55;
-      max-width: 440px;
+      max-width: 470px;
     }
     #status { margin-top: 4px; color: #fbbf24; font-weight: 500; }
     #minimap {
@@ -34,7 +34,7 @@
 </head>
 <body>
   <div id="hud">
-    <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>F</strong>: Toggle Flashlight</div>
+    <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>F</strong>: Flashlight • <strong>M</strong>: Mute</div>
     <div id="status">Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.</div>
   </div>
   <canvas id="minimap" width="190" height="190"></canvas>
@@ -63,6 +63,136 @@
       'art1.jpg'
     ];
 
+    // Synthesized Web Audio: Creepy Dungeon Drone + Victory Chime (no external audio files needed)
+    class DungeonAudio {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.droneGain = null;
+        this.osc1 = null;
+        this.osc2 = null;
+        this.lfo = null;
+        this.muted = false;
+        this.droneRunning = false;
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.value = this.muted ? 0 : 0.35;
+          this.masterGain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      startCreepyMusic() {
+        this.ensureContext();
+        if (this.droneRunning) {
+          if (this.droneGain) {
+            this.droneGain.gain.setTargetAtTime(0.28, this.ctx.currentTime, 0.25);
+          }
+          return;
+        }
+
+        const now = this.ctx.currentTime;
+        this.droneGain = this.ctx.createGain();
+        this.droneGain.gain.setValueAtTime(0.001, now);
+        this.droneGain.gain.exponentialRampToValueAtTime(0.28, now + 1.2);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(210, now);
+
+        // Low minor-second / tritone tension frequencies for an eerie underground feel
+        this.osc1 = this.ctx.createOscillator();
+        this.osc1.type = 'sawtooth';
+        this.osc1.frequency.setValueAtTime(55, now); // Low A1
+
+        this.osc2 = this.ctx.createOscillator();
+        this.osc2.type = 'triangle';
+        this.osc2.frequency.setValueAtTime(58.27, now); // Slightly detuned / eerie beat frequency
+
+        // Slow LFO modulating filter cutoff for creepy breathing/creaking movement
+        this.lfo = this.ctx.createOscillator();
+        this.lfo.type = 'sine';
+        this.lfo.frequency.setValueAtTime(0.14, now);
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.setValueAtTime(95, now);
+        this.lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        this.osc1.connect(filter);
+        this.osc2.connect(filter);
+        filter.connect(this.droneGain);
+        this.droneGain.connect(this.masterGain);
+
+        this.osc1.start(now);
+        this.osc2.start(now);
+        this.lfo.start(now);
+        this.droneRunning = true;
+      }
+
+      stopCreepyMusic(fadeSec = 0.25) {
+        if (!this.ctx || !this.droneGain || !this.droneRunning) return;
+        const now = this.ctx.currentTime;
+        this.droneGain.gain.setTargetAtTime(0.0001, now, fadeSec);
+      }
+
+      playPickupClick() {
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.09);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.13);
+      }
+
+      playVictoryChime() {
+        this.stopCreepyMusic(0.15);
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        // Bright ascending chime notes (C5, E5, G5, B5, C6)
+        const notes = [523.25, 659.25, 783.99, 987.77, 1046.5];
+        notes.forEach((freq, idx) => {
+          const start = now + idx * 0.13;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0.001, start);
+          gain.gain.linearRampToValueAtTime(0.32, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0008, start + 0.85);
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.start(start);
+          osc.stop(start + 0.9);
+        });
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        if (this.masterGain && this.ctx) {
+          this.masterGain.gain.setTargetAtTime(this.muted ? 0 : 0.35, this.ctx.currentTime, 0.05);
+        }
+        return this.muted;
+      }
+    }
+
+    const audio = new DungeonAudio();
+
     // 19x19 Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary
     const MAZE = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -90,8 +220,6 @@
     const WALL_H = 3.8;
     const PLAYER_R = 0.72;
     const SANCTUARY_RADIUS = 13.5;
-
-    // Flashlight pickup location on an open corridor tile near the start
     const FLASHLIGHT_CELL = { r: 1, c: 3 };
 
     const scene = new THREE.Scene();
@@ -108,14 +236,12 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    // Pitch black ambient & subtle close-proximity glow until flashlight is found
     const ambientLight = new THREE.AmbientLight(0x334155, 0.0);
     scene.add(ambientLight);
 
     const faintSenseLight = new THREE.PointLight(0x94a3b8, 0.45, 3.2, 2.0);
     camera.add(faintSenseLight);
 
-    // Working Flashlight (SpotLight aimed forward from camera)
     const flashlight = new THREE.SpotLight(0xfff7ed, 0, 28, Math.PI / 5.2, 0.45, 1.3);
     flashlight.position.set(0.18, -0.14, 0);
     const flashlightTarget = new THREE.Object3D();
@@ -124,7 +250,6 @@
     camera.add(flashlightTarget);
     flashlight.target = flashlightTarget;
 
-    // Procedural Weathered Dungeon Stone Texture
     function makeDungeonStoneTexture() {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 256;
@@ -149,7 +274,6 @@
       return tex;
     }
 
-    // Procedural Cobweb Texture
     function makeCobwebTexture() {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 256;
@@ -180,7 +304,6 @@
       return new THREE.CanvasTexture(c);
     }
 
-    // Fallback Procedural Artwork
     function makeFallbackArtTexture() {
       const c = document.createElement('canvas');
       c.width = 512; c.height = 512;
@@ -213,7 +336,6 @@
       return tex;
     }
 
-    // Load user artwork textures with automatic fallback
     const loader = new THREE.TextureLoader();
     const fallbackArtTex = makeFallbackArtTexture();
     const artMaterials = ART_FILES.map((file) => {
@@ -231,7 +353,6 @@
       return mat;
     });
 
-    // Unobscured Exit Sign Texture ("OvertPsyops.AI" / "@TLTHE5TH")
     function makeExitSignTexture() {
       const c = document.createElement('canvas');
       c.width = 640; c.height = 320;
@@ -273,7 +394,6 @@
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
 
-    // Floor & Ceiling
     const mapSize = MAZE.length * CELL;
     const planeGeo = new THREE.PlaneGeometry(mapSize, mapSize);
     const floor = new THREE.Mesh(planeGeo, floorMat);
@@ -286,7 +406,7 @@
     ceiling.position.set(mapSize / 2 - CELL / 2, WALL_H, mapSize / 2 - CELL / 2);
     scene.add(ceiling);
 
-    // Pickup Flashlight Model in the Maze
+    // Pickup Flashlight Model
     const flashlightPickup = new THREE.Group();
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.25 });
     const lensMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
@@ -305,7 +425,6 @@
     pickupBeaconLight.position.set(pickupX, 1.15, pickupZ);
     scene.add(pickupBeaconLight);
 
-    // Locate Exit Sanctuary
     let exitPos = new THREE.Vector3();
     for (let r = 0; r < MAZE.length; r++) {
       for (let c = 0; c < MAZE[r].length; c++) {
@@ -322,7 +441,6 @@
     function createSpider(x, y, z, baseYaw) {
       const group = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.4 });
-      // MeshBasicMaterial keeps glowing red eyes visible even in pitch darkness
       const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff1e1e });
 
       const abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), bodyMat);
@@ -426,7 +544,6 @@
       }
     }
 
-    // Player State
     const player = {
       x: 1 * CELL,
       z: 1 * CELL,
@@ -448,6 +565,7 @@
       flashlightPickup.visible = true;
       pickupBeaconLight.intensity = 4.5;
       document.getElementById('status').textContent = 'Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.';
+      audio.startCreepyMusic();
     }
 
     function canMoveTo(nx, nz) {
@@ -464,15 +582,21 @@
       return true;
     }
 
-    // Input Handling
     const keys = {};
     window.addEventListener('keydown', (e) => {
       keys[e.code] = true;
       if (e.code === 'KeyF' && player.hasFlashlight && !player.won) {
         player.flashlightOn = !player.flashlightOn;
+        audio.playPickupClick();
         document.getElementById('status').textContent = player.flashlightOn
           ? 'Flashlight ON (Press F to toggle) — Follow the path to OvertPsyops.AI • @TLTHE5TH'
           : 'Flashlight OFF (Press F to turn back on) — Red eyes glow in the dark';
+      }
+      if (e.code === 'KeyM') {
+        const isMuted = audio.toggleMute();
+        document.getElementById('status').textContent = isMuted
+          ? 'Audio muted (Press M to unmute)'
+          : 'Audio unmuted (Press M to mute)';
       }
     });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -483,6 +607,8 @@
     startBtn.addEventListener('click', () => {
       if (player.won) {
         resetGame();
+      } else {
+        audio.startCreepyMusic();
       }
       overlay.style.display = 'none';
       renderer.domElement.requestPointerLock?.();
@@ -490,6 +616,7 @@
 
     document.addEventListener('pointerlockchange', () => {
       if (document.pointerLockElement !== renderer.domElement && !player.won) {
+        audio.stopCreepyMusic(0.2);
         document.getElementById('overlay-title').textContent = 'Paused';
         document.getElementById('overlay-text').textContent = 'Click below to resume walking.';
         startBtn.textContent = 'Resume';
@@ -503,7 +630,6 @@
       }
     });
 
-    // Minimap Renderer (dimmer until flashlight is found)
     const mini = document.getElementById('minimap');
     const mctx = mini.getContext('2d');
     function drawMinimap() {
@@ -537,7 +663,6 @@
       mctx.stroke();
     }
 
-    // Main Animation Loop
     let last = performance.now();
     function animate(now) {
       requestAnimationFrame(animate);
@@ -585,12 +710,12 @@
         camera.position.set(player.x, 1.65, player.z);
         camera.rotation.y = player.yaw;
 
-        // Check if player reaches the flashlight pickup
         if (!player.hasFlashlight && Math.hypot(player.x - pickupX, player.z - pickupZ) < 1.55) {
           player.hasFlashlight = true;
           player.flashlightOn = true;
           flashlightPickup.visible = false;
           pickupBeaconLight.intensity = 0;
+          audio.playPickupClick();
           document.getElementById('status').textContent = 'Flashlight found! Press F to toggle beam • Find OvertPsyops.AI • @TLTHE5TH';
         }
 
@@ -601,7 +726,6 @@
         scene.fog.color.copy(scene.background);
         scene.fog.density = THREE.MathUtils.lerp(0.085, 0.012, lightFactor);
 
-        // Pitch black before finding flashlight; brightens as you approach exit sanctuary
         ambientLight.intensity = lightFactor * 2.5;
         faintSenseLight.intensity = player.hasFlashlight ? 0.1 : 0.4;
         flashlight.intensity = player.flashlightOn
@@ -610,6 +734,7 @@
 
         if (distToExit < 1.65) {
           player.won = true;
+          audio.playVictoryChime();
           document.exitPointerLock?.();
           document.getElementById('overlay-title').textContent = 'OvertPsyops.AI';
           document.getElementById('overlay-text').innerHTML = '<strong>@TLTHE5TH</strong><br>You found your way through the dark into the light.';
