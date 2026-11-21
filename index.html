@@ -6,23 +6,25 @@
   <title>3D Dungeon Labyrinth — OvertPsyops.AI @TLTHE5TH</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { overflow: hidden; background: #050608; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
+    body { overflow: hidden; background: #000000; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
     #hud {
       position: fixed; top: 14px; left: 14px; z-index: 10;
-      background: rgba(8, 10, 15, 0.82); border: 1px solid rgba(255,255,255,0.16);
-      padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.5;
+      background: rgba(6, 8, 12, 0.85); border: 1px solid rgba(255,255,255,0.16);
+      padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.55;
+      max-width: 440px;
     }
+    #status { margin-top: 4px; color: #fbbf24; font-weight: 500; }
     #minimap {
       position: fixed; top: 14px; right: 14px; z-index: 10;
-      border: 2px solid rgba(255,255,255,0.28); border-radius: 6px; background: #0b0d12;
+      border: 2px solid rgba(255,255,255,0.25); border-radius: 6px; background: #050608;
     }
     #overlay {
       position: fixed; inset: 0; z-index: 20;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(5, 7, 12, 0.86); text-align: center; padding: 24px;
+      background: rgba(2, 3, 6, 0.92); text-align: center; padding: 24px;
     }
     #overlay h1 { font-size: 2.1rem; margin-bottom: 10px; }
-    #overlay p { color: #cbd5e1; max-width: 480px; margin-bottom: 20px; line-height: 1.5; }
+    #overlay p { color: #cbd5e1; max-width: 490px; margin-bottom: 20px; line-height: 1.55; }
     button {
       background: #2563eb; color: #fff; border: none; padding: 12px 26px;
       font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer;
@@ -32,15 +34,17 @@
 </head>
 <body>
   <div id="hud">
-    <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn)</div>
-    <div id="status">Escape the dark dungeon toward the light: OvertPsyops.AI • @TLTHE5TH</div>
+    <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>F</strong>: Toggle Flashlight</div>
+    <div id="status">Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.</div>
   </div>
   <canvas id="minimap" width="190" height="190"></canvas>
 
   <div id="overlay">
     <h1 id="overlay-title">3D Dungeon Labyrinth</h1>
-    <p id="overlay-text">Navigate the cobwebbed dungeon corridors past the spiders and framed artwork until you reach the light of <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).</p>
-    <button id="start-btn">Enter Dungeon</button>
+    <p id="overlay-text">
+      <strong>Note: Find the flashlight.</strong> The dungeon begins in pitch darkness with glowing red spider eyes watching in the gloom. Pick up the flashlight, shine it on the walls and artwork, and reach <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).
+    </p>
+    <button id="start-btn">Enter the Dark</button>
   </div>
 
   <script type="importmap">
@@ -54,11 +58,9 @@
   <script type="module">
     import * as THREE from 'three';
 
-    // Put your image filenames here (upload them to the same GitHub folder as index.html)
+    // Put your uploaded image filenames here (must match exact names in the repo)
     const ART_FILES = [
-      'art1.jpg',
-      'art2.jpg',
-      'art3.jpg'
+      'art1.jpg'
     ];
 
     // 19x19 Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary
@@ -87,25 +89,40 @@
     const CELL = 4;
     const WALL_H = 3.8;
     const PLAYER_R = 0.72;
-    const SANCTUARY_RADIUS = 13.5; // Distance from exit where dungeon turns bright & clean
+    const SANCTUARY_RADIUS = 13.5;
+
+    // Flashlight pickup location on an open corridor tile near the start
+    const FLASHLIGHT_CELL = { r: 1, c: 3 };
 
     const scene = new THREE.Scene();
-    const darkBg = new THREE.Color(0x06070a);
+    const pitchBlack = new THREE.Color(0x000000);
     const brightBg = new THREE.Color(0xdbeafe);
-    scene.background = darkBg.clone();
-    scene.fog = new THREE.FogExp2(0x06070a, 0.065);
+    scene.background = pitchBlack.clone();
+    scene.fog = new THREE.FogExp2(0x000000, 0.085);
 
     const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 120);
+    scene.add(camera);
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    // Lighting: warm dungeon torch + ambient light that brightens near the exit
-    const ambientLight = new THREE.AmbientLight(0x475569, 0.65);
+    // Pitch black ambient & subtle close-proximity glow until flashlight is found
+    const ambientLight = new THREE.AmbientLight(0x334155, 0.0);
     scene.add(ambientLight);
-    const torch = new THREE.PointLight(0xffb76b, 16, 15, 1.6);
-    scene.add(torch);
+
+    const faintSenseLight = new THREE.PointLight(0x94a3b8, 0.45, 3.2, 2.0);
+    camera.add(faintSenseLight);
+
+    // Working Flashlight (SpotLight aimed forward from camera)
+    const flashlight = new THREE.SpotLight(0xfff7ed, 0, 28, Math.PI / 5.2, 0.45, 1.3);
+    flashlight.position.set(0.18, -0.14, 0);
+    const flashlightTarget = new THREE.Object3D();
+    flashlightTarget.position.set(0.18, -0.14, -10);
+    camera.add(flashlight);
+    camera.add(flashlightTarget);
+    flashlight.target = flashlightTarget;
 
     // Procedural Weathered Dungeon Stone Texture
     function makeDungeonStoneTexture() {
@@ -123,7 +140,6 @@
           ctx.fillRect(x + offset + 3, y + 3, 58, 26);
         }
       }
-      // Subtle moss / grime specks
       for (let i = 0; i < 450; i++) {
         ctx.fillStyle = Math.random() > 0.5 ? 'rgba(20, 45, 25, 0.22)' : 'rgba(0, 0, 0, 0.25)';
         ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 4);
@@ -133,16 +149,15 @@
       return tex;
     }
 
-    // Procedural Cobweb Texture (Transparent PNG-style Canvas)
+    // Procedural Cobweb Texture
     function makeCobwebTexture() {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
       ctx.clearRect(0, 0, 256, 256);
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.55)';
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.58)';
       ctx.lineWidth = 1.5;
 
-      // Radial spokes from top-left corner
       for (let i = 0; i <= 8; i++) {
         const angle = (i / 8) * (Math.PI / 2);
         ctx.beginPath();
@@ -150,7 +165,6 @@
         ctx.lineTo(Math.cos(angle) * 250, Math.sin(angle) * 250);
         ctx.stroke();
       }
-      // Curved web rings
       for (let r = 28; r <= 230; r += 26) {
         ctx.beginPath();
         for (let i = 0; i <= 8; i++) {
@@ -166,7 +180,7 @@
       return new THREE.CanvasTexture(c);
     }
 
-    // Fallback Procedural Artwork (matches the geometric starburst aesthetic)
+    // Fallback Procedural Artwork
     function makeFallbackArtTexture() {
       const c = document.createElement('canvas');
       c.width = 512; c.height = 512;
@@ -203,7 +217,7 @@
     const loader = new THREE.TextureLoader();
     const fallbackArtTex = makeFallbackArtTexture();
     const artMaterials = ART_FILES.map((file) => {
-      const mat = new THREE.MeshBasicMaterial({ map: fallbackArtTex });
+      const mat = new THREE.MeshStandardMaterial({ map: fallbackArtTex, roughness: 0.4 });
       loader.load(
         file,
         (tex) => {
@@ -212,7 +226,7 @@
           mat.needsUpdate = true;
         },
         undefined,
-        () => { /* keeps fallback texture if file not uploaded yet */ }
+        () => {}
       );
       return mat;
     });
@@ -250,11 +264,12 @@
     const sanctuaryWallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.45 });
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.95 });
     const ceilMat = new THREE.MeshStandardMaterial({ color: 0x090b0e, roughness: 0.98 });
-    const webMat = new THREE.MeshBasicMaterial({
+    const webMat = new THREE.MeshStandardMaterial({
       map: makeCobwebTexture(),
       transparent: true,
       depthWrite: false,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      roughness: 0.8
     });
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
 
@@ -271,7 +286,26 @@
     ceiling.position.set(mapSize / 2 - CELL / 2, WALL_H, mapSize / 2 - CELL / 2);
     scene.add(ceiling);
 
-    // Find exit position first so we know which areas are near the bright sanctuary
+    // Pickup Flashlight Model in the Maze
+    const flashlightPickup = new THREE.Group();
+    const barrelMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.25 });
+    const lensMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.48, 16), barrelMat);
+    barrel.rotation.x = Math.PI / 2;
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.095, 16), lensMat);
+    lens.position.z = 0.245;
+    flashlightPickup.add(barrel, lens);
+
+    const pickupX = FLASHLIGHT_CELL.c * CELL;
+    const pickupZ = FLASHLIGHT_CELL.r * CELL;
+    flashlightPickup.position.set(pickupX, 0.95, pickupZ);
+    scene.add(flashlightPickup);
+
+    const pickupBeaconLight = new THREE.PointLight(0xfef08a, 4.5, 6.5, 1.8);
+    pickupBeaconLight.position.set(pickupX, 1.15, pickupZ);
+    scene.add(pickupBeaconLight);
+
+    // Locate Exit Sanctuary
     let exitPos = new THREE.Vector3();
     for (let r = 0; r < MAZE.length; r++) {
       for (let c = 0; c < MAZE[r].length; c++) {
@@ -279,7 +313,6 @@
       }
     }
 
-    // Build Walls, Gallery Art Frames, Cobwebs, Spiders, and Exit Sanctuary
     const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
     const webGeo = new THREE.PlaneGeometry(1.7, 1.7);
     const spiders = [];
@@ -289,7 +322,8 @@
     function createSpider(x, y, z, baseYaw) {
       const group = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.4 });
-      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+      // MeshBasicMaterial keeps glowing red eyes visible even in pitch darkness
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff1e1e });
 
       const abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), bodyMat);
       abdomen.scale.set(1, 0.8, 1.3);
@@ -300,16 +334,14 @@
       head.position.set(0, 0.07, 0.08);
       group.add(head);
 
-      // Glowing red eyes
-      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), eyeMat);
-      eyeL.position.set(-0.04, 0.1, 0.17);
+      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), eyeMat);
+      eyeL.position.set(-0.042, 0.1, 0.175);
       const eyeR = eyeL.clone();
-      eyeR.position.x = 0.04;
+      eyeR.position.x = 0.042;
       group.add(eyeL, eyeR);
 
-      // 8 jointed-style legs
       const legs = [];
-      for (let side of [-1, 1]) {
+      for (const side of [-1, 1]) {
         for (let i = 0; i < 4; i++) {
           const leg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.022, 0.022), bodyMat);
           leg.position.set(side * 0.17, 0.06, 0.08 - i * 0.07);
@@ -355,7 +387,6 @@
           wall.position.set(x, WALL_H / 2, z);
           scene.add(wall);
 
-          // Mount framed artwork along open dungeon corridor walls
           if (!nearSanctuary && (r + c) % 4 === 0) {
             if (MAZE[r][c + 1] === 0) mountArtworkOnWall(x, z, 1, 0);
             else if (MAZE[r][c - 1] === 0) mountArtworkOnWall(x, z, -1, 0);
@@ -363,19 +394,16 @@
             else if (MAZE[r - 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, -1);
           }
         } else if (MAZE[r][c] === 0 && !nearSanctuary) {
-          // Hang corner cobwebs high up in dungeon corridors
           if ((r * 7 + c * 13) % 3 === 0) {
             const web = new THREE.Mesh(webGeo, webMat);
             web.position.set(x - 1.1, WALL_H - 0.85, z - 1.1);
             web.rotation.y = ((r + c) % 4) * (Math.PI / 2);
             scene.add(web);
           }
-          // Spawn crawling spiders on select dungeon tiles (away from spawn [1,1])
           if ((r > 2 || c > 2) && (r * 5 + c * 11) % 7 === 0) {
             createSpider(x, 0.02, z, Math.random() * Math.PI * 2);
           }
         } else if (MAZE[r][c] === 2) {
-          // Low glowing floor pad so NOTHING obstructs the text
           const pad = new THREE.Mesh(
             new THREE.CylinderGeometry(1.35, 1.5, 0.12, 24),
             new THREE.MeshBasicMaterial({ color: 0x22c55e })
@@ -383,7 +411,6 @@
           pad.position.set(x, 0.06, z);
           scene.add(pad);
 
-          // Unobstructed floating exit sign at eye-level
           const signMat = new THREE.MeshBasicMaterial({
             map: makeExitSignTexture(),
             side: THREE.DoubleSide
@@ -399,9 +426,29 @@
       }
     }
 
-    // Player State (Start at grid [1,1])
-    const player = { x: 1 * CELL, z: 1 * CELL, yaw: 0, won: false };
+    // Player State
+    const player = {
+      x: 1 * CELL,
+      z: 1 * CELL,
+      yaw: 0,
+      hasFlashlight: false,
+      flashlightOn: false,
+      won: false
+    };
     camera.position.set(player.x, 1.65, player.z);
+
+    function resetGame() {
+      player.x = 1 * CELL;
+      player.z = 1 * CELL;
+      player.yaw = 0;
+      player.hasFlashlight = false;
+      player.flashlightOn = false;
+      player.won = false;
+      flashlight.intensity = 0;
+      flashlightPickup.visible = true;
+      pickupBeaconLight.intensity = 4.5;
+      document.getElementById('status').textContent = 'Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.';
+    }
 
     function canMoveTo(nx, nz) {
       const minC = Math.floor((nx - PLAYER_R + CELL / 2) / CELL);
@@ -419,7 +466,15 @@
 
     // Input Handling
     const keys = {};
-    window.addEventListener('keydown', (e) => { keys[e.code] = true; });
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (e.code === 'KeyF' && player.hasFlashlight && !player.won) {
+        player.flashlightOn = !player.flashlightOn;
+        document.getElementById('status').textContent = player.flashlightOn
+          ? 'Flashlight ON (Press F to toggle) — Follow the path to OvertPsyops.AI • @TLTHE5TH'
+          : 'Flashlight OFF (Press F to turn back on) — Red eyes glow in the dark';
+      }
+    });
     window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
     const overlay = document.getElementById('overlay');
@@ -427,8 +482,7 @@
 
     startBtn.addEventListener('click', () => {
       if (player.won) {
-        player.x = 1 * CELL; player.z = 1 * CELL; player.yaw = 0; player.won = false;
-        document.getElementById('status').textContent = 'Escape the dark dungeon toward the light: OvertPsyops.AI • @TLTHE5TH';
+        resetGame();
       }
       overlay.style.display = 'none';
       renderer.domElement.requestPointerLock?.();
@@ -449,7 +503,7 @@
       }
     });
 
-    // Minimap Renderer
+    // Minimap Renderer (dimmer until flashlight is found)
     const mini = document.getElementById('minimap');
     const mctx = mini.getContext('2d');
     function drawMinimap() {
@@ -457,10 +511,22 @@
       mctx.clearRect(0, 0, mini.width, mini.height);
       for (let r = 0; r < MAZE.length; r++) {
         for (let c = 0; c < MAZE[r].length; c++) {
-          mctx.fillStyle = MAZE[r][c] === 1 ? '#334155' : MAZE[r][c] === 2 ? '#22c55e' : '#090b10';
+          if (!player.hasFlashlight) {
+            mctx.fillStyle = MAZE[r][c] === 1 ? '#090b10' : '#020305';
+          } else {
+            mctx.fillStyle = MAZE[r][c] === 1 ? '#334155' : MAZE[r][c] === 2 ? '#22c55e' : '#090b10';
+          }
           mctx.fillRect(c * s, r * s, s, s);
         }
       }
+
+      if (!player.hasFlashlight) {
+        mctx.fillStyle = '#fef08a';
+        mctx.beginPath();
+        mctx.arc((pickupX / CELL + 0.5) * s, (pickupZ / CELL + 0.5) * s, s * 0.25, 0, Math.PI * 2);
+        mctx.fill();
+      }
+
       const px = (player.x / CELL + 0.5) * s;
       const pz = (player.z / CELL + 0.5) * s;
       mctx.fillStyle = '#38bdf8';
@@ -483,7 +549,11 @@
         exitSign.lookAt(camera.position.x, exitSign.position.y, camera.position.z);
       }
 
-      // Animate dungeon spiders
+      if (flashlightPickup.visible) {
+        flashlightPickup.rotation.y = t * 1.8;
+        flashlightPickup.position.y = 0.95 + Math.sin(t * 3) * 0.08;
+      }
+
       for (const sp of spiders) {
         const patrol = Math.sin(t * 1.6 + sp.phase) * 0.65;
         sp.group.position.x = sp.originX + Math.cos(sp.group.rotation.y) * patrol;
@@ -514,24 +584,35 @@
 
         camera.position.set(player.x, 1.65, player.z);
         camera.rotation.y = player.yaw;
-        torch.position.set(player.x, 2.2, player.z);
 
-        // Smooth transition from dark flickering dungeon to bright clear sanctuary near exit
+        // Check if player reaches the flashlight pickup
+        if (!player.hasFlashlight && Math.hypot(player.x - pickupX, player.z - pickupZ) < 1.55) {
+          player.hasFlashlight = true;
+          player.flashlightOn = true;
+          flashlightPickup.visible = false;
+          pickupBeaconLight.intensity = 0;
+          document.getElementById('status').textContent = 'Flashlight found! Press F to toggle beam • Find OvertPsyops.AI • @TLTHE5TH';
+        }
+
         const distToExit = Math.hypot(player.x - exitPos.x, player.z - exitPos.z);
         const lightFactor = THREE.MathUtils.clamp(1 - (distToExit / (SANCTUARY_RADIUS + 4)), 0, 1);
 
-        scene.background.lerpColors(darkBg, brightBg, lightFactor * 0.75);
+        scene.background.lerpColors(pitchBlack, brightBg, lightFactor * 0.8);
         scene.fog.color.copy(scene.background);
-        scene.fog.density = THREE.MathUtils.lerp(0.068, 0.014, lightFactor);
-        ambientLight.intensity = THREE.MathUtils.lerp(0.65, 2.6, lightFactor);
-        torch.intensity = THREE.MathUtils.lerp(15 + Math.sin(t * 12) * 1.8, 6, lightFactor);
+        scene.fog.density = THREE.MathUtils.lerp(0.085, 0.012, lightFactor);
 
-        // Check Exit Distance
+        // Pitch black before finding flashlight; brightens as you approach exit sanctuary
+        ambientLight.intensity = lightFactor * 2.5;
+        faintSenseLight.intensity = player.hasFlashlight ? 0.1 : 0.4;
+        flashlight.intensity = player.flashlightOn
+          ? THREE.MathUtils.lerp(26 + Math.sin(t * 14) * 1.2, 8, lightFactor)
+          : 0;
+
         if (distToExit < 1.65) {
           player.won = true;
           document.exitPointerLock?.();
           document.getElementById('overlay-title').textContent = 'OvertPsyops.AI';
-          document.getElementById('overlay-text').innerHTML = '<strong>@TLTHE5TH</strong><br>You escaped the dungeon into the light.';
+          document.getElementById('overlay-text').innerHTML = '<strong>@TLTHE5TH</strong><br>You found your way through the dark into the light.';
           startBtn.textContent = 'Play Again';
           overlay.style.display = 'flex';
         }
