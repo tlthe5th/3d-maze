@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Walkthrough Maze — OvertPsyops.AI @TLTHE5TH</title>
+  <title>3D Dungeon Labyrinth — OvertPsyops.AI @TLTHE5TH</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { overflow: hidden; background: #0a0c10; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
+    body { overflow: hidden; background: #050608; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
     #hud {
       position: fixed; top: 14px; left: 14px; z-index: 10;
-      background: rgba(10, 14, 22, 0.78); border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(8, 10, 15, 0.82); border: 1px solid rgba(255,255,255,0.16);
       padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.5;
     }
     #minimap {
       position: fixed; top: 14px; right: 14px; z-index: 10;
-      border: 2px solid rgba(255,255,255,0.25); border-radius: 6px; background: #111;
+      border: 2px solid rgba(255,255,255,0.28); border-radius: 6px; background: #0b0d12;
     }
     #overlay {
       position: fixed; inset: 0; z-index: 20;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(8, 10, 16, 0.85); text-align: center; padding: 24px;
+      background: rgba(5, 7, 12, 0.86); text-align: center; padding: 24px;
     }
-    #overlay h1 { font-size: 2rem; margin-bottom: 10px; }
-    #overlay p { color: #cbd5e1; max-width: 460px; margin-bottom: 20px; line-height: 1.5; }
+    #overlay h1 { font-size: 2.1rem; margin-bottom: 10px; }
+    #overlay p { color: #cbd5e1; max-width: 480px; margin-bottom: 20px; line-height: 1.5; }
     button {
-      background: #2563eb; color: #fff; border: none; padding: 12px 24px;
+      background: #2563eb; color: #fff; border: none; padding: 12px 26px;
       font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer;
     }
     button:hover { background: #1d4ed8; }
@@ -32,15 +32,15 @@
 </head>
 <body>
   <div id="hud">
-    <div><strong>Controls:</strong> WASD / Arrow Keys to walk • Mouse to look (or Q/E to turn)</div>
-    <div id="status">Reach the exit sign: OvertPsyops.AI • @TLTHE5TH</div>
+    <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn)</div>
+    <div id="status">Escape the dark dungeon toward the light: OvertPsyops.AI • @TLTHE5TH</div>
   </div>
-  <canvas id="minimap" width="165" height="165"></canvas>
+  <canvas id="minimap" width="190" height="190"></canvas>
 
   <div id="overlay">
-    <h1 id="overlay-title">3D Labyrinth</h1>
-    <p id="overlay-text">Walk through the 3D maze to reach the exit sign displaying <strong>OvertPsyops.AI</strong> and <strong>@TLTHE5TH</strong>.</p>
-    <button id="start-btn">Enter Maze</button>
+    <h1 id="overlay-title">3D Dungeon Labyrinth</h1>
+    <p id="overlay-text">Navigate the cobwebbed dungeon corridors past the spiders and framed artwork until you reach the light of <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).</p>
+    <button id="start-btn">Enter Dungeon</button>
   </div>
 
   <script type="importmap">
@@ -54,93 +54,209 @@
   <script type="module">
     import * as THREE from 'three';
 
-    // 1 = Wall, 0 = Path, 2 = Exit
-    const MAZE = [
-      [1,1,1,1,1,1,1,1,1,1,1],
-      [1,0,0,0,1,0,0,0,0,0,1],
-      [1,0,1,0,1,0,1,1,1,0,1],
-      [1,0,1,0,0,0,0,0,1,0,1],
-      [1,0,1,1,1,1,1,0,1,0,1],
-      [1,0,0,0,0,0,1,0,0,0,1],
-      [1,1,1,1,1,0,1,1,1,0,1],
-      [1,0,0,0,1,0,0,0,1,0,1],
-      [1,0,1,0,1,1,1,0,1,0,1],
-      [1,0,1,0,0,0,0,0,0,2,1],
-      [1,1,1,1,1,1,1,1,1,1,1]
+    // Put your image filenames here (upload them to the same GitHub folder as index.html)
+    const ART_FILES = [
+      'fggfgfghhg.jpg',
+      'art2.jpg',
+      'art3.jpg'
     ];
 
-    const CELL = 4;        // Width/depth of each maze tile in meters
-    const WALL_H = 3.6;    // Wall height
-    const PLAYER_R = 0.75; // Collision radius
+    // 19x19 Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary
+    const MAZE = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+      [1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1],
+      [1,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1],
+      [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1,0,1],
+      [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+      [1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1],
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,1],
+      [1,0,1,0,1,1,1,1,1,0,1,0,1,1,1,0,1,0,1],
+      [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
+      [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1],
+      [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1],
+      [1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1],
+      [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
+      [1,0,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1],
+      [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
+      [1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,2,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
 
-    // Scene, Camera, Renderer
+    const CELL = 4;
+    const WALL_H = 3.8;
+    const PLAYER_R = 0.72;
+    const SANCTUARY_RADIUS = 13.5; // Distance from exit where dungeon turns bright & clean
+
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b101b);
-    scene.fog = new THREE.FogExp2(0x0b101b, 0.045);
+    const darkBg = new THREE.Color(0x06070a);
+    const brightBg = new THREE.Color(0xdbeafe);
+    scene.background = darkBg.clone();
+    scene.fog = new THREE.FogExp2(0x06070a, 0.065);
 
-    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 120);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     document.body.appendChild(renderer.domElement);
 
-    // Lighting
-    scene.add(new THREE.AmbientLight(0x64748b, 1.1));
-    const torch = new THREE.PointLight(0xffedd5, 18, 16, 1.5);
+    // Lighting: warm dungeon torch + ambient light that brightens near the exit
+    const ambientLight = new THREE.AmbientLight(0x475569, 0.65);
+    scene.add(ambientLight);
+    const torch = new THREE.PointLight(0xffb76b, 16, 15, 1.6);
     scene.add(torch);
 
-    // Procedural Brick Texture
-    function makeBrickTexture() {
+    // Procedural Weathered Dungeon Stone Texture
+    function makeDungeonStoneTexture() {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#334155';
+      ctx.fillStyle = '#181b20';
       ctx.fillRect(0, 0, 256, 256);
-      ctx.fillStyle = '#475569';
+
       for (let y = 0; y < 256; y += 32) {
         const offset = (y / 32) % 2 === 0 ? 0 : 32;
         for (let x = -32; x < 256; x += 64) {
-          ctx.fillRect(x + offset + 2, y + 2, 60, 28);
+          const shade = 36 + Math.floor(Math.random() * 24);
+          ctx.fillStyle = `rgb(${shade}, ${shade + 2}, ${shade + 6})`;
+          ctx.fillRect(x + offset + 3, y + 3, 58, 26);
         }
+      }
+      // Subtle moss / grime specks
+      for (let i = 0; i < 450; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? 'rgba(20, 45, 25, 0.22)' : 'rgba(0, 0, 0, 0.25)';
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 4);
       }
       const tex = new THREE.CanvasTexture(c);
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       return tex;
     }
 
-    // Exit Sign Texture ("OvertPsyops.AI" / "@TLTHE5TH")
-    function makeExitSignTexture() {
+    // Procedural Cobweb Texture (Transparent PNG-style Canvas)
+    function makeCobwebTexture() {
       const c = document.createElement('canvas');
-      c.width = 512;
-      c.height = 256;
+      c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, 256, 256);
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.55)';
+      ctx.lineWidth = 1.5;
 
-      ctx.fillStyle = '#07131f';
-      ctx.fillRect(0, 0, c.width, c.height);
+      // Radial spokes from top-left corner
+      for (let i = 0; i <= 8; i++) {
+        const angle = (i / 8) * (Math.PI / 2);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(angle) * 250, Math.sin(angle) * 250);
+        ctx.stroke();
+      }
+      // Curved web rings
+      for (let r = 28; r <= 230; r += 26) {
+        ctx.beginPath();
+        for (let i = 0; i <= 8; i++) {
+          const a = (i / 8) * (Math.PI / 2);
+          const sag = (i % 2 === 0 ? 0 : -6);
+          const px = Math.cos(a) * (r + sag);
+          const py = Math.sin(a) * (r + sag);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      return new THREE.CanvasTexture(c);
+    }
 
-      ctx.strokeStyle = '#22c55e';
-      ctx.lineWidth = 8;
-      ctx.strokeRect(10, 10, c.width - 20, c.height - 20);
+    // Fallback Procedural Artwork (matches the geometric starburst aesthetic)
+    function makeFallbackArtTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#030712';
+      ctx.fillRect(0, 0, 512, 512);
 
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      const grad = ctx.createRadialGradient(256, 256, 10, 256, 256, 220);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.28, '#60a5fa');
+      grad.addColorStop(0.65, '#1e3a8a');
+      grad.addColorStop(1, '#020617');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 54px system-ui, -apple-system, sans-serif';
-      ctx.fillText('OvertPsyops.AI', c.width / 2, 92);
-
-      ctx.fillStyle = '#4ade80';
-      ctx.font = 'bold 46px monospace';
-      ctx.fillText('@TLTHE5TH', c.width / 2, 166);
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.75)';
+      ctx.lineWidth = 4;
+      for (let i = -256; i <= 768; i += 64) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 256, 512); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(i + 256, 0); ctx.lineTo(i, 512); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('OvertPsyops.AI', 486, 264);
 
       const tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;
       return tex;
     }
 
-    const wallMat = new THREE.MeshStandardMaterial({ map: makeBrickTexture(), roughness: 0.85 });
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
-    const ceilMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.95 });
+    // Load user artwork textures with automatic fallback
+    const loader = new THREE.TextureLoader();
+    const fallbackArtTex = makeFallbackArtTexture();
+    const artMaterials = ART_FILES.map((file) => {
+      const mat = new THREE.MeshBasicMaterial({ map: fallbackArtTex });
+      loader.load(
+        file,
+        (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          mat.map = tex;
+          mat.needsUpdate = true;
+        },
+        undefined,
+        () => { /* keeps fallback texture if file not uploaded yet */ }
+      );
+      return mat;
+    });
+
+    // Unobscured Exit Sign Texture ("OvertPsyops.AI" / "@TLTHE5TH")
+    function makeExitSignTexture() {
+      const c = document.createElement('canvas');
+      c.width = 640; c.height = 320;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = '#061523';
+      ctx.fillRect(0, 0, c.width, c.height);
+
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(12, 12, c.width - 24, c.height - 24);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 68px system-ui, -apple-system, sans-serif';
+      ctx.fillText('OvertPsyops.AI', c.width / 2, 115);
+
+      ctx.fillStyle = '#4ade80';
+      ctx.font = 'bold 56px monospace';
+      ctx.fillText('@TLTHE5TH', c.width / 2, 210);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    const wallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture(), roughness: 0.9 });
+    const sanctuaryWallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.45 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.95 });
+    const ceilMat = new THREE.MeshStandardMaterial({ color: 0x090b0e, roughness: 0.98 });
+    const webMat = new THREE.MeshBasicMaterial({
+      map: makeCobwebTexture(),
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
 
     // Floor & Ceiling
     const mapSize = MAZE.length * CELL;
@@ -155,39 +271,129 @@
     ceiling.position.set(mapSize / 2 - CELL / 2, WALL_H, mapSize / 2 - CELL / 2);
     scene.add(ceiling);
 
-    // Build Maze Walls & Exit Beacon + Sign
-    const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
+    // Find exit position first so we know which areas are near the bright sanctuary
     let exitPos = new THREE.Vector3();
+    for (let r = 0; r < MAZE.length; r++) {
+      for (let c = 0; c < MAZE[r].length; c++) {
+        if (MAZE[r][c] === 2) exitPos.set(c * CELL, 1.9, r * CELL);
+      }
+    }
+
+    // Build Walls, Gallery Art Frames, Cobwebs, Spiders, and Exit Sanctuary
+    const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
+    const webGeo = new THREE.PlaneGeometry(1.7, 1.7);
+    const spiders = [];
     let exitSign = null;
+    let artIndex = 0;
+
+    function createSpider(x, y, z, baseYaw) {
+      const group = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.4 });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+
+      const abdomen = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), bodyMat);
+      abdomen.scale.set(1, 0.8, 1.3);
+      abdomen.position.set(0, 0.08, -0.14);
+      group.add(abdomen);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), bodyMat);
+      head.position.set(0, 0.07, 0.08);
+      group.add(head);
+
+      // Glowing red eyes
+      const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 6), eyeMat);
+      eyeL.position.set(-0.04, 0.1, 0.17);
+      const eyeR = eyeL.clone();
+      eyeR.position.x = 0.04;
+      group.add(eyeL, eyeR);
+
+      // 8 jointed-style legs
+      const legs = [];
+      for (let side of [-1, 1]) {
+        for (let i = 0; i < 4; i++) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.022, 0.022), bodyMat);
+          leg.position.set(side * 0.17, 0.06, 0.08 - i * 0.07);
+          leg.rotation.z = side * -0.35;
+          leg.rotation.y = side * (0.35 - i * 0.22);
+          group.add(leg);
+          legs.push({ mesh: leg, side, idx: i });
+        }
+      }
+
+      group.position.set(x, y, z);
+      group.rotation.y = baseYaw;
+      scene.add(group);
+      spiders.push({ group, legs, originX: x, originZ: z, phase: Math.random() * Math.PI * 2 });
+    }
+
+    function mountArtworkOnWall(wx, wz, dirX, dirZ) {
+      const mat = artMaterials[artIndex % artMaterials.length];
+      artIndex++;
+
+      const holder = new THREE.Group();
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.1, 0.08), frameMat);
+      const canvasMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), mat);
+      canvasMesh.position.z = 0.045;
+      holder.add(frame, canvasMesh);
+
+      holder.position.set(wx + dirX * (CELL / 2 + 0.05), 1.85, wz + dirZ * (CELL / 2 + 0.05));
+      if (dirX === 1) holder.rotation.y = Math.PI / 2;
+      if (dirX === -1) holder.rotation.y = -Math.PI / 2;
+      if (dirZ === -1) holder.rotation.y = Math.PI;
+      scene.add(holder);
+    }
 
     for (let r = 0; r < MAZE.length; r++) {
       for (let c = 0; c < MAZE[r].length; c++) {
         const x = c * CELL;
         const z = r * CELL;
+        const distToExit = Math.hypot(x - exitPos.x, z - exitPos.z);
+        const nearSanctuary = distToExit < SANCTUARY_RADIUS;
+
         if (MAZE[r][c] === 1) {
-          const wall = new THREE.Mesh(wallGeo, wallMat);
+          const wall = new THREE.Mesh(wallGeo, nearSanctuary ? sanctuaryWallMat : wallMat);
           wall.position.set(x, WALL_H / 2, z);
           scene.add(wall);
-        } else if (MAZE[r][c] === 2) {
-          exitPos.set(x, 1.2, z);
 
-          const beacon = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.45, 0.45, 2.4, 16),
+          // Mount framed artwork along open dungeon corridor walls
+          if (!nearSanctuary && (r + c) % 4 === 0) {
+            if (MAZE[r][c + 1] === 0) mountArtworkOnWall(x, z, 1, 0);
+            else if (MAZE[r][c - 1] === 0) mountArtworkOnWall(x, z, -1, 0);
+            else if (MAZE[r + 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, 1);
+            else if (MAZE[r - 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, -1);
+          }
+        } else if (MAZE[r][c] === 0 && !nearSanctuary) {
+          // Hang corner cobwebs high up in dungeon corridors
+          if ((r * 7 + c * 13) % 3 === 0) {
+            const web = new THREE.Mesh(webGeo, webMat);
+            web.position.set(x - 1.1, WALL_H - 0.85, z - 1.1);
+            web.rotation.y = ((r + c) % 4) * (Math.PI / 2);
+            scene.add(web);
+          }
+          // Spawn crawling spiders on select dungeon tiles (away from spawn [1,1])
+          if ((r > 2 || c > 2) && (r * 5 + c * 11) % 7 === 0) {
+            createSpider(x, 0.02, z, Math.random() * Math.PI * 2);
+          }
+        } else if (MAZE[r][c] === 2) {
+          // Low glowing floor pad so NOTHING obstructs the text
+          const pad = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.35, 1.5, 0.12, 24),
             new THREE.MeshBasicMaterial({ color: 0x22c55e })
           );
-          beacon.position.copy(exitPos);
-          scene.add(beacon);
+          pad.position.set(x, 0.06, z);
+          scene.add(pad);
 
+          // Unobstructed floating exit sign at eye-level
           const signMat = new THREE.MeshBasicMaterial({
             map: makeExitSignTexture(),
             side: THREE.DoubleSide
           });
-          exitSign = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.4), signMat);
-          exitSign.position.set(x, 2.55, z);
+          exitSign = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 1.55), signMat);
+          exitSign.position.set(x, 1.95, z);
           scene.add(exitSign);
 
-          const exitLight = new THREE.PointLight(0x22c55e, 14, 12);
-          exitLight.position.set(x, 2.2, z);
+          const exitLight = new THREE.PointLight(0xffffff, 35, 22, 1.2);
+          exitLight.position.set(x, 2.8, z);
           scene.add(exitLight);
         }
       }
@@ -222,7 +428,7 @@
     startBtn.addEventListener('click', () => {
       if (player.won) {
         player.x = 1 * CELL; player.z = 1 * CELL; player.yaw = 0; player.won = false;
-        document.getElementById('status').textContent = 'Reach the exit sign: OvertPsyops.AI • @TLTHE5TH';
+        document.getElementById('status').textContent = 'Escape the dark dungeon toward the light: OvertPsyops.AI • @TLTHE5TH';
       }
       overlay.style.display = 'none';
       renderer.domElement.requestPointerLock?.();
@@ -251,29 +457,40 @@
       mctx.clearRect(0, 0, mini.width, mini.height);
       for (let r = 0; r < MAZE.length; r++) {
         for (let c = 0; c < MAZE[r].length; c++) {
-          mctx.fillStyle = MAZE[r][c] === 1 ? '#475569' : MAZE[r][c] === 2 ? '#22c55e' : '#0f172a';
+          mctx.fillStyle = MAZE[r][c] === 1 ? '#334155' : MAZE[r][c] === 2 ? '#22c55e' : '#090b10';
           mctx.fillRect(c * s, r * s, s, s);
         }
       }
       const px = (player.x / CELL + 0.5) * s;
       const pz = (player.z / CELL + 0.5) * s;
       mctx.fillStyle = '#38bdf8';
-      mctx.beginPath(); mctx.arc(px, pz, s * 0.3, 0, Math.PI * 2); mctx.fill();
+      mctx.beginPath(); mctx.arc(px, pz, s * 0.34, 0, Math.PI * 2); mctx.fill();
       mctx.strokeStyle = '#38bdf8';
       mctx.beginPath(); mctx.moveTo(px, pz);
-      mctx.lineTo(px - Math.sin(player.yaw) * s * 0.8, pz - Math.cos(player.yaw) * s * 0.8);
+      mctx.lineTo(px - Math.sin(player.yaw) * s * 0.85, pz - Math.cos(player.yaw) * s * 0.85);
       mctx.stroke();
     }
 
-    // Main Loop
+    // Main Animation Loop
     let last = performance.now();
     function animate(now) {
       requestAnimationFrame(animate);
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
+      const t = now * 0.001;
 
       if (exitSign) {
         exitSign.lookAt(camera.position.x, exitSign.position.y, camera.position.z);
+      }
+
+      // Animate dungeon spiders
+      for (const sp of spiders) {
+        const patrol = Math.sin(t * 1.6 + sp.phase) * 0.65;
+        sp.group.position.x = sp.originX + Math.cos(sp.group.rotation.y) * patrol;
+        sp.group.position.z = sp.originZ + Math.sin(sp.group.rotation.y) * patrol;
+        for (const leg of sp.legs) {
+          leg.mesh.rotation.z = leg.side * (-0.35 + Math.sin(t * 14 + leg.idx) * 0.18);
+        }
       }
 
       if (!player.won) {
@@ -287,7 +504,7 @@
         if (keys['KeyD'] || keys['ArrowRight']) strafe += 1;
         if (keys['KeyA'] || keys['ArrowLeft']) strafe -= 1;
 
-        const speed = 5.5 * dt;
+        const speed = 5.6 * dt;
         const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
         const dx = (-sin * forward + cos * strafe) * speed;
         const dz = (-cos * forward - sin * strafe) * speed;
@@ -299,12 +516,22 @@
         camera.rotation.y = player.yaw;
         torch.position.set(player.x, 2.2, player.z);
 
+        // Smooth transition from dark flickering dungeon to bright clear sanctuary near exit
+        const distToExit = Math.hypot(player.x - exitPos.x, player.z - exitPos.z);
+        const lightFactor = THREE.MathUtils.clamp(1 - (distToExit / (SANCTUARY_RADIUS + 4)), 0, 1);
+
+        scene.background.lerpColors(darkBg, brightBg, lightFactor * 0.75);
+        scene.fog.color.copy(scene.background);
+        scene.fog.density = THREE.MathUtils.lerp(0.068, 0.014, lightFactor);
+        ambientLight.intensity = THREE.MathUtils.lerp(0.65, 2.6, lightFactor);
+        torch.intensity = THREE.MathUtils.lerp(15 + Math.sin(t * 12) * 1.8, 6, lightFactor);
+
         // Check Exit Distance
-        if (Math.hypot(player.x - exitPos.x, player.z - exitPos.z) < 1.5) {
+        if (distToExit < 1.65) {
           player.won = true;
           document.exitPointerLock?.();
           document.getElementById('overlay-title').textContent = 'OvertPsyops.AI';
-          document.getElementById('overlay-text').innerHTML = '<strong>@TLTHE5TH</strong><br>You reached the end of the maze.';
+          document.getElementById('overlay-text').innerHTML = '<strong>@TLTHE5TH</strong><br>You escaped the dungeon into the light.';
           startBtn.textContent = 'Play Again';
           overlay.style.display = 'flex';
         }
