@@ -26,4 +26,4 @@ A self-contained, browser-based first-person 3D dungeon maze built with **Three.
 1. Create a public repository on GitHub (for example, `3d-maze`).
 2. Add `index.html` and `README.md` to the repository root.
 3. Go to **Settings -> Pages**, set **Source** to **Deploy from a branch**, select `main` and `/ (root)`, and save.
-4. Open `https://<your-username>.github.io/3d-maze/`.
+4. Open `https://tlthe5th.github.io/3d-maze/`.
