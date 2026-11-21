@@ -11,25 +11,44 @@
       position: fixed; top: 14px; left: 14px; z-index: 10;
       background: rgba(6, 8, 12, 0.85); border: 1px solid rgba(255,255,255,0.16);
       padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.55;
-      max-width: 470px;
+      max-width: 490px;
     }
     #status { margin-top: 4px; color: #fbbf24; font-weight: 500; }
+    #banner {
+      position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 15;
+      display: none; background: rgba(10, 15, 28, 0.92);
+      border: 1px solid rgba(250, 204, 21, 0.55); box-shadow: 0 0 24px rgba(250, 204, 21, 0.2);
+      padding: 12px 20px; border-radius: 10px; max-width: 540px; text-align: center;
+      font-size: 14px; line-height: 1.5; color: #fef9c3; pointer-events: none;
+    }
     #minimap {
       position: fixed; top: 14px; right: 14px; z-index: 10;
       border: 2px solid rgba(255,255,255,0.25); border-radius: 6px; background: #050608;
+      transition: opacity 0.08s linear;
     }
     #overlay {
       position: fixed; inset: 0; z-index: 20;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(2, 3, 6, 0.92); text-align: center; padding: 24px;
+      background: rgba(2, 3, 6, 0.93); text-align: center; padding: 24px;
     }
-    #overlay h1 { font-size: 2.1rem; margin-bottom: 10px; }
-    #overlay p { color: #cbd5e1; max-width: 490px; margin-bottom: 20px; line-height: 1.55; }
-    button {
-      background: #2563eb; color: #fff; border: none; padding: 12px 26px;
-      font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer;
+    #overlay h1 { font-size: 2.15rem; margin-bottom: 10px; }
+    #overlay p { color: #cbd5e1; max-width: 540px; margin-bottom: 18px; line-height: 1.55; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 6px; }
+    button, a.action-link {
+      background: #2563eb; color: #fff; border: none; padding: 11px 20px;
+      font-size: 15px; font-weight: 600; border-radius: 8px; cursor: pointer;
+      text-decoration: none; display: inline-block;
     }
-    button:hover { background: #1d4ed8; }
+    button:hover, a.action-link:hover { background: #1d4ed8; }
+    button.secondary { background: #1e293b; border: 1px solid rgba(255,255,255,0.2); }
+    button.secondary:hover { background: #334155; }
+    a.action-link.alt { background: #0f766e; }
+    a.action-link.alt:hover { background: #0d9488; }
+    #sanctuary-links {
+      display: none; margin-top: 16px; padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.14); max-width: 540px;
+    }
+    #sanctuary-links .verse { font-size: 13px; color: #93c5fd; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -37,14 +56,32 @@
     <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>F</strong>: Flashlight • <strong>M</strong>: Mute</div>
     <div id="status">Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.</div>
   </div>
+
+  <div id="banner"></div>
   <canvas id="minimap" width="190" height="190"></canvas>
 
   <div id="overlay">
     <h1 id="overlay-title">3D Dungeon Labyrinth</h1>
     <p id="overlay-text">
-      <strong>Note: Find the flashlight.</strong> The dungeon begins in pitch darkness with glowing red spider eyes watching in the gloom. Pick up the flashlight, shine it on the walls and artwork, and reach <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).
+      <strong>Note: Find the flashlight.</strong> The dungeon begins in pitch darkness with glowing red spider eyes watching in the gloom. Pick up the flashlight, shine it on cobwebs and spiders, view the framed wall art, and reach <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).
     </p>
-    <button id="start-btn">Enter the Dark</button>
+    <div class="btn-row">
+      <button id="start-btn">Enter the Dark</button>
+    </div>
+    <div id="sanctuary-links">
+      <div class="verse">
+        Ἰωάννης (John) 8:12 — "I am the φῶς (light) of the κόσμος (world). He who follows Me shall not walk in σκότος (darkness), but shall have the φῶς (light) of life."
+      </div>
+      <div class="btn-row">
+        <a class="action-link" href="https://spirituallysmart.com/overtpsyopsai.html" target="_blank" rel="noopener">OvertPsyops.AI</a>
+        <a class="action-link alt" href="https://spirituallysmart.com/OvertPsyops.pdf" target="_blank" rel="noopener">#OvertPsyops Book</a>
+        <a class="action-link alt" href="https://spirituallysmart.com/OvertPsyopsBiblePart1.pdf" target="_blank" rel="noopener">#OvertPsyopsBible</a>
+      </div>
+      <div class="btn-row" style="margin-top: 10px;">
+        <button id="share-x-btn" class="secondary">Share Escape on X</button>
+        <button id="copy-line-btn" class="secondary">Copy Post Line</button>
+      </div>
+    </div>
   </div>
 
   <script type="importmap">
@@ -69,6 +106,7 @@
         this.ctx = null;
         this.masterGain = null;
         this.droneGain = null;
+        this.filter = null;
         this.osc1 = null;
         this.osc2 = null;
         this.lfo = null;
@@ -103,37 +141,41 @@
         this.droneGain.gain.setValueAtTime(0.001, now);
         this.droneGain.gain.exponentialRampToValueAtTime(0.28, now + 1.2);
 
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(210, now);
+        this.filter = this.ctx.createBiquadFilter();
+        this.filter.type = 'lowpass';
+        this.filter.frequency.setValueAtTime(210, now);
 
-        // Low minor-second / tritone tension frequencies for an eerie underground feel
         this.osc1 = this.ctx.createOscillator();
         this.osc1.type = 'sawtooth';
-        this.osc1.frequency.setValueAtTime(55, now); // Low A1
+        this.osc1.frequency.setValueAtTime(55, now);
 
         this.osc2 = this.ctx.createOscillator();
         this.osc2.type = 'triangle';
-        this.osc2.frequency.setValueAtTime(58.27, now); // Slightly detuned / eerie beat frequency
+        this.osc2.frequency.setValueAtTime(58.27, now);
 
-        // Slow LFO modulating filter cutoff for creepy breathing/creaking movement
         this.lfo = this.ctx.createOscillator();
         this.lfo.type = 'sine';
         this.lfo.frequency.setValueAtTime(0.14, now);
         const lfoGain = this.ctx.createGain();
         lfoGain.gain.setValueAtTime(95, now);
         this.lfo.connect(lfoGain);
-        lfoGain.connect(filter.frequency);
+        lfoGain.connect(this.filter.frequency);
 
-        this.osc1.connect(filter);
-        this.osc2.connect(filter);
-        filter.connect(this.droneGain);
+        this.osc1.connect(this.filter);
+        this.osc2.connect(this.filter);
+        this.filter.connect(this.droneGain);
         this.droneGain.connect(this.masterGain);
 
         this.osc1.start(now);
         this.osc2.start(now);
         this.lfo.start(now);
         this.droneRunning = true;
+      }
+
+      setSpiderProximityTension(nearSpider) {
+        if (!this.ctx || !this.filter || !this.droneRunning) return;
+        const targetFreq = nearSpider ? 460 : 210;
+        this.filter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.12);
       }
 
       stopCreepyMusic(fadeSec = 0.25) {
@@ -159,12 +201,28 @@
         osc.stop(now + 0.13);
       }
 
+      playBurnWebSound() {
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(340, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.22);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+
       playVictoryChime() {
         this.stopCreepyMusic(0.15);
         if (this.muted) return;
         this.ensureContext();
         const now = this.ctx.currentTime;
-        // Bright ascending chime notes (C5, E5, G5, B5, C6)
         const notes = [523.25, 659.25, 783.99, 987.77, 1046.5];
         notes.forEach((freq, idx) => {
           const start = now + idx * 0.13;
@@ -221,6 +279,24 @@
     const PLAYER_R = 0.72;
     const SANCTUARY_RADIUS = 13.5;
     const FLASHLIGHT_CELL = { r: 1, c: 3 };
+
+    // Fake-shortcut cobweb barriers placed in corridors; shine flashlight on them to clear
+    const FAKE_SHORTCUT_WEBS = [
+      { r: 5, c: 3, hint: 'Fake Shortcut Web: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
+      { r: 9, c: 5, hint: 'Fake Shortcut Web: "Skip the long turn here!" — Shine your flashlight (F) to clear the deception.' },
+      { r: 13, c: 7, hint: 'Fake Shortcut Web: "Secret shortcut ahead!" — Shine your flashlight (F) to test what is real.' }
+    ];
+
+    const bannerEl = document.getElementById('banner');
+    let bannerTimer = null;
+    function showBanner(html, durationMs = 4500) {
+      bannerEl.innerHTML = html;
+      bannerEl.style.display = 'block';
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => {
+        bannerEl.style.display = 'none';
+      }, durationMs);
+    }
 
     const scene = new THREE.Scene();
     const pitchBlack = new THREE.Color(0x000000);
@@ -279,7 +355,7 @@
       c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
       ctx.clearRect(0, 0, 256, 256);
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.58)';
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.62)';
       ctx.lineWidth = 1.5;
 
       for (let i = 0; i <= 8; i++) {
@@ -300,6 +376,20 @@
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    function makeBarrierWebTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, 256, 256);
+      ctx.strokeStyle = 'rgba(241, 245, 249, 0.55)';
+      ctx.lineWidth = 2;
+      for (let i = -256; i <= 512; i += 32) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 256, 256); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(i + 256, 0); ctx.lineTo(i, 256); ctx.stroke();
       }
       return new THREE.CanvasTexture(c);
     }
@@ -392,6 +482,13 @@
       side: THREE.DoubleSide,
       roughness: 0.8
     });
+    const barrierWebMat = new THREE.MeshStandardMaterial({
+      map: makeBarrierWebTexture(),
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      roughness: 0.7
+    });
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
 
     const mapSize = MAZE.length * CELL;
@@ -435,6 +532,7 @@
     const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
     const webGeo = new THREE.PlaneGeometry(1.7, 1.7);
     const spiders = [];
+    const shortcutBarriers = [];
     let exitSign = null;
     let artIndex = 0;
 
@@ -473,7 +571,16 @@
       group.position.set(x, y, z);
       group.rotation.y = baseYaw;
       scene.add(group);
-      spiders.push({ group, legs, originX: x, originZ: z, phase: Math.random() * Math.PI * 2 });
+      spiders.push({
+        group,
+        legs,
+        originX: x,
+        originZ: z,
+        x,
+        z,
+        phase: Math.random() * Math.PI * 2,
+        scatterTimer: 0
+      });
     }
 
     function mountArtworkOnWall(wx, wz, dirX, dirZ) {
@@ -544,15 +651,38 @@
       }
     }
 
+    // Build fake-shortcut cobweb barriers
+    for (const cfg of FAKE_SHORTCUT_WEBS) {
+      const wx = cfg.c * CELL;
+      const wz = cfg.r * CELL;
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(CELL * 0.85, WALL_H * 0.78), barrierWebMat);
+      mesh.position.set(wx, WALL_H * 0.39, wz);
+      mesh.rotation.y = ((cfg.r + cfg.c) % 2) * (Math.PI / 2);
+      scene.add(mesh);
+      shortcutBarriers.push({
+        x: wx,
+        z: wz,
+        mesh,
+        cleared: false,
+        burnProgress: 0,
+        hint: cfg.hint,
+        lastHintTime: 0
+      });
+    }
+
     const player = {
       x: 1 * CELL,
       z: 1 * CELL,
       yaw: 0,
       hasFlashlight: false,
       flashlightOn: false,
-      won: false
+      won: false,
+      startTime: 0,
+      escapeSeconds: 0
     };
     camera.position.set(player.x, 1.65, player.z);
+
+    const sanctuaryLinksEl = document.getElementById('sanctuary-links');
 
     function resetGame() {
       player.x = 1 * CELL;
@@ -561,11 +691,42 @@
       player.hasFlashlight = false;
       player.flashlightOn = false;
       player.won = false;
+      player.startTime = performance.now();
+      player.escapeSeconds = 0;
       flashlight.intensity = 0;
       flashlightPickup.visible = true;
       pickupBeaconLight.intensity = 4.5;
+      sanctuaryLinksEl.style.display = 'none';
+
+      for (const sp of spiders) {
+        sp.x = sp.originX;
+        sp.z = sp.originZ;
+        sp.group.position.set(sp.x, 0.02, sp.z);
+        sp.scatterTimer = 0;
+      }
+      for (const b of shortcutBarriers) {
+        b.cleared = false;
+        b.burnProgress = 0;
+        b.mesh.visible = true;
+        b.mesh.scale.set(1, 1, 1);
+      }
+
       document.getElementById('status').textContent = 'Note: It is pitch black—find the flashlight in the dark! Watch for glowing red eyes.';
       audio.startCreepyMusic();
+    }
+
+    function isInFlashlightBeam(targetX, targetZ, maxDist) {
+      if (!player.hasFlashlight || !player.flashlightOn || player.won) return false;
+      const toX = targetX - player.x;
+      const toZ = targetZ - player.z;
+      const dist = Math.hypot(toX, toZ);
+      if (dist > maxDist || dist < 0.01) return false;
+
+      // Forward direction in XZ from yaw (-sin(yaw), -cos(yaw))
+      const fwdX = -Math.sin(player.yaw);
+      const fwdZ = -Math.cos(player.yaw);
+      const dot = (toX / dist) * fwdX + (toZ / dist) * fwdZ;
+      return dot > 0.72; // ~44-degree cone
     }
 
     function canMoveTo(nx, nz) {
@@ -577,6 +738,13 @@
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
           if (!MAZE[r] || MAZE[r][c] === 1) return false;
+        }
+      }
+
+      // Active fake-shortcut cobwebs block passage until burned away with flashlight
+      for (const b of shortcutBarriers) {
+        if (!b.cleared && Math.hypot(nx - b.x, nz - b.z) < PLAYER_R + 0.75) {
+          return false;
         }
       }
       return true;
@@ -605,9 +773,11 @@
     const startBtn = document.getElementById('start-btn');
 
     startBtn.addEventListener('click', () => {
+      sanctuaryLinksEl.style.display = 'none';
       if (player.won) {
         resetGame();
       } else {
+        if (!player.startTime) player.startTime = performance.now();
         audio.startCreepyMusic();
       }
       overlay.style.display = 'none';
@@ -617,6 +787,7 @@
     document.addEventListener('pointerlockchange', () => {
       if (document.pointerLockElement !== renderer.domElement && !player.won) {
         audio.stopCreepyMusic(0.2);
+        sanctuaryLinksEl.style.display = 'none';
         document.getElementById('overlay-title').textContent = 'Paused';
         document.getElementById('overlay-text').textContent = 'Click below to resume walking.';
         startBtn.textContent = 'Resume';
@@ -632,9 +803,21 @@
 
     const mini = document.getElementById('minimap');
     const mctx = mini.getContext('2d');
-    function drawMinimap() {
+    function drawMinimap(nearSpider, nowSec) {
       const s = mini.width / MAZE.length;
       mctx.clearRect(0, 0, mini.width, mini.height);
+
+      // Flicker & jitter minimap when a spider is close
+      if (nearSpider) {
+        const jx = (Math.random() - 0.5) * 8;
+        const jy = (Math.random() - 0.5) * 8;
+        mini.style.transform = `translate(${jx.toFixed(1)}px, ${jy.toFixed(1)}px)`;
+        mini.style.opacity = (0.45 + Math.abs(Math.sin(nowSec * 28)) * 0.55).toFixed(2);
+      } else {
+        mini.style.transform = 'translate(0px, 0px)';
+        mini.style.opacity = '1';
+      }
+
       for (let r = 0; r < MAZE.length; r++) {
         for (let c = 0; c < MAZE[r].length; c++) {
           if (!player.hasFlashlight) {
@@ -643,6 +826,14 @@
             mctx.fillStyle = MAZE[r][c] === 1 ? '#334155' : MAZE[r][c] === 2 ? '#22c55e' : '#090b10';
           }
           mctx.fillRect(c * s, r * s, s, s);
+        }
+      }
+
+      // Draw uncleared fake-shortcut webs faintly on minimap
+      for (const b of shortcutBarriers) {
+        if (!b.cleared) {
+          mctx.fillStyle = 'rgba(226, 232, 240, 0.35)';
+          mctx.fillRect((b.x / CELL) * s, (b.z / CELL) * s, s, s);
         }
       }
 
@@ -663,6 +854,25 @@
       mctx.stroke();
     }
 
+    function getShareLine() {
+      const timeStr = player.escapeSeconds > 0 ? ` in ${player.escapeSeconds.toFixed(1)}s` : '';
+      return `Escaped the 3D dungeon labyrinth${timeStr}—from pitch dark & red spider eyes into the light of OvertPsyops.AI (@TLTHE5TH). Play free: tlthe5th.github.io/3d-maze #OvertPsyops`;
+    }
+
+    document.getElementById('share-x-btn').addEventListener('click', () => {
+      const tweetUrl = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(getShareLine());
+      window.open(tweetUrl, '_blank', 'noopener');
+    });
+
+    document.getElementById('copy-line-btn').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(getShareLine());
+        document.getElementById('copy-line-btn').textContent = 'Copied!';
+      } catch {
+        prompt('Copy this post line:', getShareLine());
+      }
+    });
+
     let last = performance.now();
     function animate(now) {
       requestAnimationFrame(animate);
@@ -679,12 +889,65 @@
         flashlightPickup.position.y = 0.95 + Math.sin(t * 3) * 0.08;
       }
 
+      let nearestSpiderDist = Infinity;
+
       for (const sp of spiders) {
-        const patrol = Math.sin(t * 1.6 + sp.phase) * 0.65;
-        sp.group.position.x = sp.originX + Math.cos(sp.group.rotation.y) * patrol;
-        sp.group.position.z = sp.originZ + Math.sin(sp.group.rotation.y) * patrol;
+        const distToPlayer = Math.hypot(sp.x - player.x, sp.z - player.z);
+        if (distToPlayer < nearestSpiderDist) nearestSpiderDist = distToPlayer;
+
+        // Scatter away when hit by active flashlight beam
+        if (isInFlashlightBeam(sp.x, sp.z, 11.5)) {
+          sp.scatterTimer = 1.6;
+        }
+
+        if (sp.scatterTimer > 0) {
+          sp.scatterTimer -= dt;
+          const awayX = sp.x - player.x;
+          const awayZ = sp.z - player.z;
+          const len = Math.hypot(awayX, awayZ) || 1;
+          const stepX = (awayX / len) * 4.2 * dt;
+          const stepZ = (awayZ / len) * 4.2 * dt;
+          if (canMoveTo(sp.x + stepX, sp.z)) sp.x += stepX;
+          if (canMoveTo(sp.x, sp.z + stepZ)) sp.z += stepZ;
+          sp.group.rotation.y = Math.atan2(awayX, awayZ);
+        } else {
+          // Gently drift back toward patrol origin
+          sp.x += (sp.originX - sp.x) * Math.min(1, dt * 1.2);
+          sp.z += (sp.originZ - sp.z) * Math.min(1, dt * 1.2);
+          const patrol = Math.sin(t * 1.6 + sp.phase) * 0.55;
+          sp.group.position.x = sp.x + Math.cos(sp.group.rotation.y) * patrol;
+          sp.group.position.z = sp.z + Math.sin(sp.group.rotation.y) * patrol;
+        }
+        sp.group.position.x = sp.x;
+        sp.group.position.z = sp.z;
+
+        const legSpeed = sp.scatterTimer > 0 ? 28 : 14;
         for (const leg of sp.legs) {
-          leg.mesh.rotation.z = leg.side * (-0.35 + Math.sin(t * 14 + leg.idx) * 0.18);
+          leg.mesh.rotation.z = leg.side * (-0.35 + Math.sin(t * legSpeed + leg.idx) * 0.18);
+        }
+      }
+
+      const nearSpider = !player.won && nearestSpiderDist < 4.6;
+      audio.setSpiderProximityTension(nearSpider);
+
+      // Check fake-shortcut cobwebs: hint on proximity, burn/clear when shone with flashlight
+      for (const b of shortcutBarriers) {
+        if (b.cleared) continue;
+        const d = Math.hypot(player.x - b.x, player.z - b.z);
+        if (d < 2.2 && now - b.lastHintTime > 4500) {
+          b.lastHintTime = now;
+          showBanner(b.hint, 4200);
+        }
+        if (isInFlashlightBeam(b.x, b.z, 7.5)) {
+          b.burnProgress += dt * 1.35;
+          const scale = Math.max(0.05, 1 - b.burnProgress);
+          b.mesh.scale.set(scale, scale, 1);
+          if (b.burnProgress >= 1) {
+            b.cleared = true;
+            b.mesh.visible = false;
+            audio.playBurnWebSound();
+            showBanner('Cobweb cleared by the φῶς (light) — path open!', 2800);
+          }
         }
       }
 
@@ -716,7 +979,11 @@
           flashlightPickup.visible = false;
           pickupBeaconLight.intensity = 0;
           audio.playPickupClick();
-          document.getElementById('status').textContent = 'Flashlight found! Press F to toggle beam • Find OvertPsyops.AI • @TLTHE5TH';
+          showBanner(
+            '<strong>Flashlight Found!</strong><br>Ψαλμοί (Psalms) 118:105: Your λόγος (word) is a λύχνος (lamp) to my feet and a φῶς (light) to my path. Press <strong>F</strong> to toggle.',
+            5500
+          );
+          document.getElementById('status').textContent = 'Flashlight ON (Press F) — Shine on spiders & cobwebs • Find OvertPsyops.AI • @TLTHE5TH';
         }
 
         const distToExit = Math.hypot(player.x - exitPos.x, player.z - exitPos.z);
@@ -734,16 +1001,19 @@
 
         if (distToExit < 1.65) {
           player.won = true;
+          player.escapeSeconds = player.startTime ? (now - player.startTime) / 1000 : 0;
           audio.playVictoryChime();
           document.exitPointerLock?.();
           document.getElementById('overlay-title').textContent = 'OvertPsyops.AI';
-          document.getElementById('overlay-text').innerHTML = '<strong>@TLTHE5TH</strong><br>You found your way through the dark into the light.';
+          document.getElementById('overlay-text').innerHTML =
+            `<strong>@TLTHE5TH</strong><br>You escaped the dungeon into the light in <strong>${player.escapeSeconds.toFixed(1)}s</strong>.`;
           startBtn.textContent = 'Play Again';
+          sanctuaryLinksEl.style.display = 'block';
           overlay.style.display = 'flex';
         }
       }
 
-      drawMinimap();
+      drawMinimap(nearSpider, t);
       renderer.render(scene, camera);
     }
 
