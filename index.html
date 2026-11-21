@@ -103,7 +103,6 @@
       'art4.jpg'
     ];
 
-    // Synthesized Web Audio: Creepy Dungeon Drone + Victory Chime (no external audio files needed)
     class DungeonAudio {
       constructor() {
         this.ctx = null;
@@ -281,11 +280,9 @@
     const WALL_H = 3.8;
     const PLAYER_R = 0.72;
     const SANCTUARY_RADIUS = 13.5;
-
-    // Flashlight placed deeper into the maze rather than right near the start
     const FLASHLIGHT_CELL = { r: 7, c: 9 };
 
-    // Cobweb walls blocking corridor tiles; shine flashlight on them to burn/clear
+    // Cobweb walls placed on open corridor tiles; automatically oriented across the corridor
     const FAKE_SHORTCUT_WEBS = [
       { r: 5, c: 3, hint: 'Spiderweb Wall: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
       { r: 9, c: 5, hint: 'Spiderweb Wall: "Skip the long turn here!" — Shine your flashlight (F) to clear the web.' },
@@ -385,7 +382,6 @@
       return new THREE.CanvasTexture(c);
     }
 
-    // Organic, irregular spiderweb curtain with silk threads & anchored webs
     function makeBarrierWebTexture() {
       const c = document.createElement('canvas');
       c.width = 512;
@@ -557,7 +553,6 @@
     ceiling.position.set(mapSize / 2 - CELL / 2, WALL_H, mapSize / 2 - CELL / 2);
     scene.add(ceiling);
 
-    // Pickup Flashlight Model
     const flashlightPickup = new THREE.Group();
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.25 });
     const lensMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
@@ -637,7 +632,6 @@
       });
     }
 
-    // Full-wall artwork spanning from floor to ceiling across the wall face
     function mountArtworkOnWall(wx, wz, dirX, dirZ) {
       const mat = artMaterials[artIndex % artMaterials.length];
       artIndex++;
@@ -713,26 +707,38 @@
       }
     }
 
-    // Dual-layer organic spiderweb barriers across corridor openings
+    // Orient cobweb wall perpendicular to corridor travel direction so it spans wall-to-wall
+    function getCorridorBarrierYaw(r, c) {
+      const openNorth = MAZE[r - 1]?.[c] !== 1;
+      const openSouth = MAZE[r + 1]?.[c] !== 1;
+      const openEast = MAZE[r]?.[c + 1] !== 1;
+      const openWest = MAZE[r]?.[c - 1] !== 1;
+
+      // North-South corridor: plane normal along Z (yaw = 0) so width spans across X between walls
+      if ((openNorth || openSouth) && !(openEast && openWest)) {
+        return 0;
+      }
+      // East-West corridor: plane normal along X (yaw = PI/2) so width spans across Z between walls
+      return Math.PI / 2;
+    }
+
     for (const cfg of FAKE_SHORTCUT_WEBS) {
       const wx = cfg.c * CELL;
       const wz = cfg.r * CELL;
       const group = new THREE.Group();
-      const baseRotY = ((cfg.r + cfg.c) % 2) * (Math.PI / 2);
+      const baseRotY = getCorridorBarrierYaw(cfg.r, cfg.c);
 
       const webPlaneA = new THREE.Mesh(
         new THREE.PlaneGeometry(CELL * 0.98, WALL_H * 0.96),
         barrierWebMat
       );
-      webPlaneA.position.set(0, WALL_H * 0.48, -0.12);
-      webPlaneA.rotation.y = 0.08;
+      webPlaneA.position.set(0, WALL_H * 0.48, -0.06);
 
       const webPlaneB = new THREE.Mesh(
         new THREE.PlaneGeometry(CELL * 0.98, WALL_H * 0.96),
         barrierWebMat
       );
-      webPlaneB.position.set(0, WALL_H * 0.48, 0.12);
-      webPlaneB.rotation.y = -0.08;
+      webPlaneB.position.set(0, WALL_H * 0.48, 0.06);
 
       group.add(webPlaneA, webPlaneB);
       group.position.set(wx, 0, wz);
