@@ -11,7 +11,7 @@
       position: fixed; top: 14px; left: 14px; z-index: 10;
       background: rgba(6, 8, 12, 0.87); border: 1px solid rgba(255,255,255,0.18);
       padding: 10px 14px; border-radius: 8px; font-size: 13.5px; line-height: 1.5;
-      max-width: 520px;
+      max-width: 530px;
     }
     #hud .stats-row {
       display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px;
@@ -107,7 +107,7 @@
 </head>
 <body>
   <div id="hud">
-    <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>F</strong>: Flashlight • <strong>M</strong>: Mute</div>
+    <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>L</strong>: Pull Lever • <strong>F</strong>: Flashlight • <strong>M</strong>: Mute</div>
     <div class="stats-row">
       <div>Battery: <span id="battery-val">100%</span></div>
       <div>Letters: <span id="letters-val">0/7</span> <span id="collected-list"></span></div>
@@ -153,7 +153,7 @@
     <h1 id="overlay-title">Operation Φῶς (Light)</h1>
     <div id="best-record">Your best: None yet</div>
     <p id="overlay-text">
-      You are trapped in the Covert Labyrinth. The walls carry messages—some overt and verifiable, others covert and hidden. Find the flashlight, watch out for red-eyed spiders and spiderweb walls, collect all 7 letters of <strong>ἀλήθεια (truth)</strong> (Α Λ Η Θ Ε Ι Α), and open the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary door.
+      You are trapped in the Covert Labyrinth. The walls carry messages—some overt and verifiable, others covert and hidden. Find the flashlight, watch out for red-eyed spiders and spiderweb walls, pull the secret lever to open the sealed pocket, collect all 7 letters of <strong>ἀλήθεια (truth)</strong> (Α Λ Η Θ Ε Ι Α), and open the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary door.
     </p>
     <div class="btn-row">
       <button id="start-btn">Enter the Dark</button>
@@ -421,7 +421,7 @@
 
     const audio = new DungeonAudio();
 
-    // 19x19 Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary
+    // 19x19 Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary, 3 = Secret Lever-Opened Gate
     const MAZE = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
@@ -437,7 +437,7 @@
       [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1],
       [1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1],
       [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
-      [1,0,1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1],
+      [1,0,1,0,1,3,1,1,1,0,1,1,1,0,1,1,1,0,1],
       [1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
       [1,0,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1],
       [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,2,1],
@@ -449,6 +449,8 @@
     const PLAYER_R = 0.72;
     const SANCTUARY_RADIUS = 13.5;
     const FLASHLIGHT_CELL = { r: 7, c: 9 };
+    const SECRET_GATE_CELL = { r: 14, c: 5 };
+    const SECRET_LEVER_CELL = { r: 13, c: 3 };
 
     const FAKE_SHORTCUT_WEBS = [
       { r: 5, c: 3, hint: 'Spiderweb Wall: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
@@ -456,7 +458,7 @@
       { r: 13, c: 7, hint: 'Spiderweb Wall: "Secret shortcut ahead!" — Shine your flashlight (F) to test what is real.' }
     ];
 
-    // 7 Greek letters of ΑΛΗΘΕΙΑ (note: two identical 'Α' glyphs)
+    // 7 Greek letters of ΑΛΗΘΕΙΑ (note: two identical 'Α' glyphs; 'Ι' sits inside the lever-unlocked pocket at r:15, c:5)
     const TARGET_WORD = ['Α', 'Λ', 'Η', 'Θ', 'Ε', 'Ι', 'Α'];
     const LETTER_SLOTS = [
       { char: 'Α', r: 1, c: 7 },
@@ -468,14 +470,12 @@
       { char: 'Α', r: 17, c: 13 }
     ];
 
-    // Battery pickups near overt routes to reward careful discernment
     const BATTERY_CELLS = [
       { r: 5, c: 9 },
       { r: 11, c: 9 },
       { r: 15, c: 15 }
     ];
 
-    // Plaque definitions (positions randomized across open corridor slots each run)
     const PLAQUE_CANDIDATE_CELLS = [
       { r: 1, c: 5 },
       { r: 3, c: 9 },
@@ -497,7 +497,7 @@
       },
       {
         type: 'overt',
-        text: 'Side passage turns back to main hall; verify with your beam. (+5% battery) ~ @TLTHE5TH',
+        text: 'Secret lever near (r13,c3) opens the sealed pocket to the south. (+5% battery) ~ @TLTHE5TH',
         outcome: { batteryDelta: 5, spiderSurge: false, trapNote: 'Checked overt sign (+5% battery).' }
       },
       {
@@ -878,6 +878,12 @@
     }
 
     const wallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture(), roughness: 0.9 });
+    const gateWallMat = new THREE.MeshStandardMaterial({
+      map: makeDungeonStoneTexture(),
+      emissive: new THREE.Color(0x1d4ed8),
+      emissiveIntensity: 0.35,
+      roughness: 0.75
+    });
     const sanctuaryWallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.45 });
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.95 });
     const ceilMat = new THREE.MeshStandardMaterial({ color: 0x090b0e, roughness: 0.98 });
@@ -927,6 +933,40 @@
     const pickupBeaconLight = new THREE.PointLight(0xfef08a, 4.5, 6.5, 1.8);
     pickupBeaconLight.position.set(pickupX, 1.15, pickupZ);
     scene.add(pickupBeaconLight);
+
+    // Secret Gate Mesh at (r: 14, c: 5) that opens when the lever is pulled
+    const secretGateMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(CELL, WALL_H, CELL),
+      gateWallMat
+    );
+    secretGateMesh.position.set(SECRET_GATE_CELL.c * CELL, WALL_H / 2, SECRET_GATE_CELL.r * CELL);
+    scene.add(secretGateMesh);
+
+    // Secret Lever Model at (r: 13, c: 3)
+    const leverGroup = new THREE.Group();
+    const leverBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.36, 0.36, 0.24),
+      new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.5 })
+    );
+    const leverHandleMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: new THREE.Color(0xd97706),
+      emissiveIntensity: 0.5,
+      roughness: 0.35
+    });
+    const leverHandle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.05, 0.72, 12),
+      leverHandleMat
+    );
+    leverHandle.position.set(0, 0.36, 0.12);
+    leverHandle.rotation.x = 0.45;
+    leverGroup.add(leverBase, leverHandle);
+    leverGroup.position.set(SECRET_LEVER_CELL.c * CELL, 1.25, SECRET_LEVER_CELL.r * CELL - 1.45);
+    scene.add(leverGroup);
+
+    const leverLight = new THREE.PointLight(0xf59e0b, 2.2, 4.5, 1.8);
+    leverLight.position.set(SECRET_LEVER_CELL.c * CELL, 1.5, SECRET_LEVER_CELL.r * CELL - 1.1);
+    scene.add(leverLight);
 
     let exitPos = new THREE.Vector3();
     for (let r = 0; r < MAZE.length; r++) {
@@ -1114,7 +1154,6 @@
       });
     }
 
-    // 7 Glowing Greek Letter Collectibles (Α Λ Η Θ Ε Ι Α)
     const letterPickups = LETTER_SLOTS.map((slot, idx) => {
       const lx = slot.c * CELL;
       const lz = slot.r * CELL;
@@ -1141,7 +1180,6 @@
       };
     });
 
-    // Battery Pickups near overt routes (+15% battery)
     const batteryPickups = BATTERY_CELLS.map((cell, idx) => {
       const bx = cell.c * CELL;
       const bz = cell.r * CELL;
@@ -1174,7 +1212,6 @@
       };
     });
 
-    // Plaques container (randomized positions & overt/covert assignments each run)
     const plaqueGroupRoot = new THREE.Group();
     scene.add(plaqueGroupRoot);
     let activePlaques = [];
@@ -1214,7 +1251,6 @@
         mesh.rotation.y = dir.rotY;
         plaqueGroupRoot.add(mesh);
 
-        // Follow-through zone slightly further down the corridor triggers covert/overt outcome on choice
         const followX = cx - dir.dx * 1.35;
         const followZ = cz - dir.dz * 1.35;
 
@@ -1241,6 +1277,7 @@
       yaw: 0,
       hasFlashlight: false,
       flashlightOn: false,
+      leverPulled: false,
       battery: 100,
       batteryDrainAccum: 0,
       collectedLetters: [],
@@ -1252,6 +1289,23 @@
       escapeSeconds: 0
     };
     camera.position.set(player.x, 1.65, player.z);
+
+    function pullSecretLeverIfNear() {
+      if (player.leverPulled || player.won || player.keypadOpen) return;
+      const lx = SECRET_LEVER_CELL.c * CELL;
+      const lz = SECRET_LEVER_CELL.r * CELL;
+      if (Math.hypot(player.x - lx, player.z - lz) < CELL * 0.95) {
+        player.leverPulled = true;
+        MAZE[SECRET_GATE_CELL.r][SECRET_GATE_CELL.c] = 0;
+        secretGateMesh.visible = false;
+        leverHandle.rotation.x = -0.45;
+        leverHandleMat.color.setHex(0x34d399);
+        leverHandleMat.emissive.setHex(0x10b981);
+        leverLight.color.setHex(0x34d399);
+        audio.playSoftOvertChime();
+        showBanner('<strong>Secret Lever Pulled!</strong> A hidden passage opened to the south—claim the letter inside.', 4200);
+      }
+    }
 
     const batteryValEl = document.getElementById('battery-val');
     const lettersValEl = document.getElementById('letters-val');
@@ -1339,7 +1393,6 @@
         saveBestRecord(rank, player.escapeSeconds);
         updateBestRecordUI();
 
-        // Flood sanctuary with bright light
         scene.background.copy(brightBg);
         scene.fog.color.copy(brightBg);
         scene.fog.density = 0.008;
@@ -1370,6 +1423,7 @@
       player.yaw = 0;
       player.hasFlashlight = false;
       player.flashlightOn = false;
+      player.leverPulled = false;
       player.battery = 100;
       player.batteryDrainAccum = 0;
       player.collectedLetters = [];
@@ -1380,6 +1434,13 @@
       player.startTime = performance.now();
       player.escapeSeconds = 0;
       keypadCooldownUntil = 0;
+
+      MAZE[SECRET_GATE_CELL.r][SECRET_GATE_CELL.c] = 3;
+      secretGateMesh.visible = true;
+      leverHandle.rotation.x = 0.45;
+      leverHandleMat.color.setHex(0xf59e0b);
+      leverHandleMat.emissive.setHex(0xd97706);
+      leverLight.color.setHex(0xf59e0b);
 
       flashlight.intensity = 0;
       flashlightPickup.visible = true;
@@ -1438,7 +1499,8 @@
 
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-          if (!MAZE[r] || MAZE[r][c] === 1) return false;
+          const tile = MAZE[r]?.[c];
+          if (tile === undefined || tile === 1 || tile === 3) return false;
         }
       }
 
@@ -1455,6 +1517,9 @@
       keys[e.code] = true;
       if (player.keypadOpen) return;
 
+      if (e.code === 'KeyL') {
+        pullSecretLeverIfNear();
+      }
       if (e.code === 'KeyF' && player.hasFlashlight && !player.won) {
         if (player.battery <= 0) {
           player.flashlightOn = false;
@@ -1525,13 +1590,23 @@
 
       for (let r = 0; r < MAZE.length; r++) {
         for (let c = 0; c < MAZE[r].length; c++) {
+          const tile = MAZE[r][c];
           if (!player.hasFlashlight) {
-            mctx.fillStyle = MAZE[r][c] === 1 ? '#090b10' : '#020305';
+            mctx.fillStyle = (tile === 1 || tile === 3) ? '#090b10' : '#020305';
+          } else if (tile === 3) {
+            mctx.fillStyle = '#3b82f6';
           } else {
-            mctx.fillStyle = MAZE[r][c] === 1 ? '#334155' : MAZE[r][c] === 2 ? '#22c55e' : '#090b10';
+            mctx.fillStyle = tile === 1 ? '#334155' : tile === 2 ? '#22c55e' : '#090b10';
           }
           mctx.fillRect(c * s, r * s, s, s);
         }
+      }
+
+      if (!player.leverPulled) {
+        mctx.fillStyle = '#f59e0b';
+        mctx.beginPath();
+        mctx.arc((SECRET_LEVER_CELL.c + 0.5) * s, (SECRET_LEVER_CELL.r + 0.5) * s, s * 0.24, 0, Math.PI * 2);
+        mctx.fill();
       }
 
       for (const b of shortcutBarriers) {
@@ -1587,6 +1662,8 @@
     });
 
     let last = performance.now();
+    let leverPromptTime = 0;
+
     function animate(now) {
       requestAnimationFrame(animate);
       const dt = Math.min((now - last) / 1000, 0.05);
@@ -1700,7 +1777,16 @@
         camera.position.set(player.x, 1.65, player.z);
         camera.rotation.y = player.yaw;
 
-        // Flashlight drain: ~1% every 3 seconds when active
+        // Secret lever proximity hint
+        if (!player.leverPulled) {
+          const lx = SECRET_LEVER_CELL.c * CELL;
+          const lz = SECRET_LEVER_CELL.r * CELL;
+          if (Math.hypot(player.x - lx, player.z - lz) < CELL * 0.95 && now - leverPromptTime > 4500) {
+            leverPromptTime = now;
+            showBanner('Amber Lever Spotted: Press <strong>L</strong> to pull it and open the sealed passage to the south.', 4000);
+          }
+        }
+
         if (player.hasFlashlight && player.flashlightOn && player.battery > 0) {
           player.batteryDrainAccum += dt;
           if (player.batteryDrainAccum >= 3.0) {
@@ -1713,7 +1799,6 @@
           }
         }
 
-        // Flashlight pickup
         if (!player.hasFlashlight && Math.hypot(player.x - pickupX, player.z - pickupZ) < 1.55) {
           player.hasFlashlight = true;
           player.flashlightOn = true;
@@ -1727,7 +1812,6 @@
           document.getElementById('status').textContent = 'Flashlight ON (Press F) — Find all 7 letters of ΑΛΗΘΕΙΑ • OvertPsyops.AI • @TLTHE5TH';
         }
 
-        // Battery pickups (+15%)
         for (const bp of batteryPickups) {
           if (!bp.collected && Math.hypot(player.x - bp.x, player.z - bp.z) < CELL * 0.95) {
             bp.collected = true;
@@ -1739,7 +1823,6 @@
           }
         }
 
-        // 7 Greek letter pickups (~1 tile radius)
         for (const lp of letterPickups) {
           if (!lp.collected && Math.hypot(player.x - lp.x, player.z - lp.z) < CELL * 0.95) {
             lp.collected = true;
@@ -1751,7 +1834,6 @@
           }
         }
 
-        // Plaque reading & choice-triggered covert consequences
         for (const pl of activePlaques) {
           const distPlaque = Math.hypot(player.x - pl.x, player.z - pl.z);
           if (distPlaque < 2.2) {
@@ -1772,7 +1854,6 @@
             }
           }
 
-          // Consequence fires only when the player follows a covert plaque into its follow-through zone
           if (pl.type === 'covert' && !pl.followedTriggered && Math.hypot(player.x - pl.followX, player.z - pl.followZ) < 1.35) {
             pl.followedTriggered = true;
             player.covertFollowed += 1;
