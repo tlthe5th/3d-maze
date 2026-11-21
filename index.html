@@ -385,56 +385,62 @@
       return new THREE.CanvasTexture(c);
     }
 
-    // Dense, high-contrast spiderweb wall texture so the barrier reads clearly in 3D
+    // Organic, irregular spiderweb curtain with silk threads & anchored webs
     function makeBarrierWebTexture() {
       const c = document.createElement('canvas');
-      c.width = 512; c.height = 512;
+      c.width = 512;
+      c.height = 512;
       const ctx = c.getContext('2d');
       ctx.clearRect(0, 0, 512, 512);
 
-      // Subtle translucent web sheet backing
-      ctx.fillStyle = 'rgba(203, 213, 225, 0.16)';
-      ctx.fillRect(0, 0, 512, 512);
-
-      // Concentric web hubs across the wall
-      const centers = [
-        { cx: 140, cy: 150, rMax: 165 },
-        { cx: 375, cy: 260, rMax: 175 },
-        { cx: 220, cy: 390, rMax: 150 }
+      const webs = [
+        { cx: 90, cy: 70, rMax: 220, startA: 0, endA: Math.PI * 0.72, spokes: 15 },
+        { cx: 420, cy: 95, rMax: 210, startA: Math.PI * 0.35, endA: Math.PI * 1.05, spokes: 14 },
+        { cx: 255, cy: 230, rMax: 245, startA: 0, endA: Math.PI * 2, spokes: 22 },
+        { cx: 140, cy: 410, rMax: 165, startA: -Math.PI * 0.4, endA: Math.PI * 0.35, spokes: 12 }
       ];
 
-      ctx.strokeStyle = 'rgba(248, 250, 252, 0.9)';
-      for (const hub of centers) {
-        const spokes = 14;
-        for (let s = 0; s < spokes; s++) {
-          const ang = (s / spokes) * Math.PI * 2;
-          ctx.lineWidth = 2.2;
+      for (const w of webs) {
+        for (let i = 0; i <= w.spokes; i++) {
+          const t = i / w.spokes;
+          const ang = w.startA + (w.endA - w.startA) * t;
+          const jitter = Math.sin(i * 5.3 + w.cx) * 10;
+          ctx.strokeStyle = 'rgba(241, 245, 249, 0.82)';
+          ctx.lineWidth = 1.6;
           ctx.beginPath();
-          ctx.moveTo(hub.cx, hub.cy);
-          ctx.lineTo(hub.cx + Math.cos(ang) * hub.rMax, hub.cy + Math.sin(ang) * hub.rMax);
+          ctx.moveTo(w.cx, w.cy);
+          ctx.lineTo(
+            w.cx + Math.cos(ang) * (w.rMax + jitter),
+            w.cy + Math.sin(ang) * (w.rMax + jitter)
+          );
           ctx.stroke();
         }
-        for (let ring = 22; ring <= hub.rMax; ring += 24) {
-          ctx.lineWidth = 2.0;
+
+        for (let r = 20; r <= w.rMax; r += 22) {
+          ctx.strokeStyle = r % 44 === 0 ? 'rgba(248, 250, 252, 0.88)' : 'rgba(203, 213, 225, 0.65)';
+          ctx.lineWidth = 1.4;
           ctx.beginPath();
-          for (let s = 0; s <= spokes; s++) {
-            const ang = (s / spokes) * Math.PI * 2;
-            const sag = s % 2 === 0 ? 4 : -3;
-            const px = hub.cx + Math.cos(ang) * (ring + sag);
-            const py = hub.cy + Math.sin(ang) * (ring + sag);
-            if (s === 0) ctx.moveTo(px, py);
+          for (let i = 0; i <= w.spokes; i++) {
+            const ang = w.startA + (w.endA - w.startA) * (i / w.spokes);
+            const sag = Math.sin(i * 2.1 + r * 0.08) * 6 + 4;
+            const px = w.cx + Math.cos(ang) * (r + sag);
+            const py = w.cy + Math.sin(ang) * (r + sag);
+            if (i === 0) ctx.moveTo(px, py);
             else ctx.lineTo(px, py);
           }
           ctx.stroke();
         }
       }
 
-      // Cross-strands so the whole corridor opening looks woven shut
       ctx.strokeStyle = 'rgba(226, 232, 240, 0.72)';
-      ctx.lineWidth = 2.2;
-      for (let i = -512; i <= 1024; i += 42) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 512, 512); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(i + 512, 0); ctx.lineTo(i, 512); ctx.stroke();
+      ctx.lineWidth = 1.3;
+      for (let x = 24; x < 490; x += 38) {
+        const topY = 10 + ((x * 17) % 90);
+        const dropLen = 90 + ((x * 29) % 210);
+        ctx.beginPath();
+        ctx.moveTo(x, topY);
+        ctx.quadraticCurveTo(x + Math.sin(x) * 14, topY + dropLen * 0.5, x + Math.cos(x) * 10, topY + dropLen);
+        ctx.stroke();
       }
 
       const tex = new THREE.CanvasTexture(c);
@@ -530,11 +536,10 @@
       side: THREE.DoubleSide,
       roughness: 0.8
     });
-    // MeshBasicMaterial keeps spiderweb walls clearly visible even before flashlight hits them
     const barrierWebMat = new THREE.MeshBasicMaterial({
       map: makeBarrierWebTexture(),
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.95,
       depthWrite: false,
       side: THREE.DoubleSide
     });
@@ -708,32 +713,33 @@
       }
     }
 
-    // Build visible spiderweb walls with a subtle silver rim light so you can spot them
+    // Dual-layer organic spiderweb barriers across corridor openings
     for (const cfg of FAKE_SHORTCUT_WEBS) {
       const wx = cfg.c * CELL;
       const wz = cfg.r * CELL;
       const group = new THREE.Group();
+      const baseRotY = ((cfg.r + cfg.c) % 2) * (Math.PI / 2);
 
-      const webPlane = new THREE.Mesh(
-        new THREE.PlaneGeometry(CELL * 0.96, WALL_H * 0.92),
+      const webPlaneA = new THREE.Mesh(
+        new THREE.PlaneGeometry(CELL * 0.98, WALL_H * 0.96),
         barrierWebMat
       );
-      webPlane.position.y = WALL_H * 0.46;
-      group.add(webPlane);
+      webPlaneA.position.set(0, WALL_H * 0.48, -0.12);
+      webPlaneA.rotation.y = 0.08;
 
-      // Subtle silk strands across the barrier so its silhouette stands out in 3D
-      const strandMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.45 });
-      for (let h = 0.65; h <= 3.1; h += 0.6) {
-        const strand = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.92, 0.02, 0.02), strandMat);
-        strand.position.y = h;
-        group.add(strand);
-      }
+      const webPlaneB = new THREE.Mesh(
+        new THREE.PlaneGeometry(CELL * 0.98, WALL_H * 0.96),
+        barrierWebMat
+      );
+      webPlaneB.position.set(0, WALL_H * 0.48, 0.12);
+      webPlaneB.rotation.y = -0.08;
 
+      group.add(webPlaneA, webPlaneB);
       group.position.set(wx, 0, wz);
-      group.rotation.y = ((cfg.r + cfg.c) % 2) * (Math.PI / 2);
+      group.rotation.y = baseRotY;
       scene.add(group);
 
-      const webGlow = new THREE.PointLight(0xe2e8f0, 1.6, 5.5, 1.8);
+      const webGlow = new THREE.PointLight(0xe2e8f0, 1.4, 5.0, 1.8);
       webGlow.position.set(wx, 2.0, wz);
       scene.add(webGlow);
 
@@ -788,7 +794,7 @@
         b.burnProgress = 0;
         b.group.visible = true;
         b.group.scale.set(1, 1, 1);
-        b.glow.intensity = 1.6;
+        b.glow.intensity = 1.4;
       }
 
       document.getElementById('status').textContent = 'Note: It is pitch black—find the flashlight deeper in the dark! Watch for glowing red eyes.';
