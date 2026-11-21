@@ -3,22 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Dungeon Labyrinth — OvertPsyops.AI @TLTHE5TH</title>
+  <title>3D Dungeon Labyrinth — Operation Φῶς (Light) • OvertPsyops.AI @TLTHE5TH</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { overflow: hidden; background: #000000; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
     #hud {
       position: fixed; top: 14px; left: 14px; z-index: 10;
-      background: rgba(6, 8, 12, 0.85); border: 1px solid rgba(255,255,255,0.16);
-      padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.55;
-      max-width: 490px;
+      background: rgba(6, 8, 12, 0.87); border: 1px solid rgba(255,255,255,0.18);
+      padding: 10px 14px; border-radius: 8px; font-size: 13.5px; line-height: 1.5;
+      max-width: 520px;
     }
-    #status { margin-top: 4px; color: #fbbf24; font-weight: 500; }
+    #hud .stats-row {
+      display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px;
+      padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.12);
+      font-size: 13px; color: #e2e8f0;
+    }
+    #battery-val.low { color: #f87171; font-weight: 700; }
+    #letters-val { color: #67e8f9; font-weight: 600; letter-spacing: 1px; }
+    #status { margin-top: 5px; color: #fbbf24; font-weight: 500; }
     #banner {
-      position: fixed; top: 96px; left: 50%; transform: translateX(-50%); z-index: 15;
-      display: none; background: rgba(10, 15, 28, 0.92);
-      border: 1px solid rgba(250, 204, 21, 0.55); box-shadow: 0 0 24px rgba(250, 204, 21, 0.2);
-      padding: 12px 20px; border-radius: 10px; max-width: 540px; text-align: center;
+      position: fixed; top: 112px; left: 50%; transform: translateX(-50%); z-index: 15;
+      display: none; background: rgba(10, 15, 28, 0.94);
+      border: 1px solid rgba(250, 204, 21, 0.6); box-shadow: 0 0 24px rgba(250, 204, 21, 0.22);
+      padding: 12px 20px; border-radius: 10px; max-width: 560px; text-align: center;
       font-size: 14px; line-height: 1.5; color: #fef9c3; pointer-events: none;
     }
     #minimap {
@@ -29,10 +36,15 @@
     #overlay {
       position: fixed; inset: 0; z-index: 20;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(2, 3, 6, 0.93); text-align: center; padding: 24px;
+      background: rgba(2, 3, 6, 0.94); text-align: center; padding: 24px; overflow-y: auto;
     }
-    #overlay h1 { font-size: 2.15rem; margin-bottom: 10px; }
-    #overlay p { color: #cbd5e1; max-width: 540px; margin-bottom: 18px; line-height: 1.55; }
+    #overlay h1 { font-size: 2.1rem; margin-bottom: 10px; }
+    #overlay p { color: #cbd5e1; max-width: 580px; margin-bottom: 14px; line-height: 1.55; }
+    #best-record {
+      font-size: 13.5px; color: #fde68a; background: rgba(250, 204, 21, 0.1);
+      border: 1px solid rgba(250, 204, 21, 0.3); padding: 6px 14px; border-radius: 999px;
+      margin-bottom: 16px;
+    }
     .btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 6px; }
     button, a.action-link {
       background: #2563eb; color: #fff; border: none; padding: 11px 20px;
@@ -44,33 +56,116 @@
     button.secondary:hover { background: #334155; }
     a.action-link.alt { background: #0f766e; }
     a.action-link.alt:hover { background: #0d9488; }
-    #sanctuary-links {
-      display: none; margin-top: 16px; padding-top: 14px;
-      border-top: 1px solid rgba(255,255,255,0.14); max-width: 540px;
+
+    /* ΑΛΗΘΕΙΑ Keypad Modal */
+    #keypad-modal {
+      position: fixed; inset: 0; z-index: 25;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(3, 6, 14, 0.94); padding: 20px; text-align: center;
     }
-    #sanctuary-links .verse { font-size: 13px; color: #93c5fd; margin-bottom: 12px; }
+    .keypad-card {
+      background: #0b1120; border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 12px; padding: 22px 24px; max-width: 440px; width: 100%;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.75);
+    }
+    .keypad-card h2 { font-size: 1.45rem; margin-bottom: 6px; color: #f8fafc; }
+    .keypad-clue { font-size: 13.5px; color: #93c5fd; margin-bottom: 14px; line-height: 1.45; }
+    #keypad-display {
+      min-height: 48px; background: #020617; border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 8px; padding: 10px 14px; font-size: 24px; letter-spacing: 6px;
+      color: #fef08a; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .greek-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;
+    }
+    .greek-btn {
+      background: #1e293b; border: 1px solid rgba(255,255,255,0.2);
+      font-size: 20px; padding: 10px 0; border-radius: 8px;
+    }
+    .greek-btn:hover { background: #334155; }
+    .keypad-ctrl-row {
+      display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 8px;
+    }
+    #keypad-msg {
+      min-height: 22px; margin-top: 10px; font-size: 13.5px; color: #fca5a5; font-weight: 500;
+    }
+
+    #sanctuary-links {
+      display: none; margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.14); max-width: 600px;
+    }
+    #sanctuary-links .verse {
+      font-size: 13px; color: #bae6fd; margin-bottom: 10px; line-height: 1.5;
+      background: rgba(15, 23, 42, 0.75); padding: 10px 12px; border-radius: 8px;
+      border: 1px solid rgba(125, 211, 252, 0.22);
+    }
+    #sanctuary-links .greek-line {
+      display: block; color: #fde68a; font-size: 12.5px; margin-top: 4px;
+    }
   </style>
 </head>
 <body>
   <div id="hud">
     <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>F</strong>: Flashlight • <strong>M</strong>: Mute</div>
+    <div class="stats-row">
+      <div>Battery: <span id="battery-val">100%</span></div>
+      <div>Letters: <span id="letters-val">0/7</span> <span id="collected-list"></span></div>
+      <div>Time: <span id="timer-val">0.0s</span></div>
+    </div>
     <div id="status">Note: It is pitch black—find the flashlight deeper in the dark! Watch for glowing red eyes.</div>
   </div>
 
   <div id="banner"></div>
   <canvas id="minimap" width="190" height="190"></canvas>
 
+  <div id="keypad-modal">
+    <div class="keypad-card">
+      <h2>Sanctuary Door — Spell the Word</h2>
+      <div class="keypad-clue">
+        Clue: "The thing that frees you." (Ἰωάννης / John 8:32) • Enter the 7 letters of ἀλήθεια (truth).
+      </div>
+      <div id="keypad-display"></div>
+      <div class="greek-grid">
+        <button type="button" class="greek-btn" data-char="Α">Α</button>
+        <button type="button" class="greek-btn" data-char="Λ">Λ</button>
+        <button type="button" class="greek-btn" data-char="Η">Η</button>
+        <button type="button" class="greek-btn" data-char="Θ">Θ</button>
+        <button type="button" class="greek-btn" data-char="Ε">Ε</button>
+        <button type="button" class="greek-btn" data-char="Ι">Ι</button>
+        <button type="button" class="greek-btn" data-char="Σ">Σ</button>
+        <button type="button" class="greek-btn" data-char="Ο">Ο</button>
+        <button type="button" class="greek-btn" data-char="Φ">Φ</button>
+      </div>
+      <div class="keypad-ctrl-row">
+        <button type="button" id="kp-backspace" class="secondary">Backspace</button>
+        <button type="button" id="kp-clear" class="secondary">Clear</button>
+        <button type="button" id="kp-submit">Unlock</button>
+      </div>
+      <div class="btn-row" style="margin-top: 10px;">
+        <button type="button" id="kp-close" class="secondary">Step Back</button>
+      </div>
+      <div id="keypad-msg"></div>
+    </div>
+  </div>
+
   <div id="overlay">
-    <h1 id="overlay-title">3D Dungeon Labyrinth</h1>
+    <h1 id="overlay-title">Operation Φῶς (Light)</h1>
+    <div id="best-record">Your best: None yet</div>
     <p id="overlay-text">
-      <strong>Note: Find the flashlight.</strong> The dungeon begins in pitch darkness with glowing red spider eyes watching in the gloom. Search deeper for the flashlight, shine it on cobweb walls and spiders, view the full-wall art, and reach <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>).
+      You are trapped in the Covert Labyrinth. The walls carry messages—some overt and verifiable, others covert and hidden. Find the flashlight, watch out for red-eyed spiders and spiderweb walls, collect all 7 letters of <strong>ἀλήθεια (truth)</strong> (Α Λ Η Θ Ε Ι Α), and open the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary door.
     </p>
     <div class="btn-row">
       <button id="start-btn">Enter the Dark</button>
     </div>
     <div id="sanctuary-links">
       <div class="verse">
-        Ἰωάννης (John) 8:12 — "I am the φῶς (light) of the κόσμος (world). He who follows Me shall not walk in σκότος (darkness), but shall have the φῶς (light) of life."
+        <strong>Ἰωάννης (John) 8:32:</strong> "And you shall know the ἀλήθεια (truth), and the ἀλήθεια (truth) shall set you free."
+        <span class="greek-line">καὶ γνώσεσθε τὴν ἀλήθειαν, καὶ ἡ ἀλήθεια ἐλευθερώσει ὑμᾶς.</span>
+      </div>
+      <div class="verse">
+        <strong>Ἰωάννης (John) 3:20–21:</strong> Whoever practices evil hates the φῶς (light) so their works are not exposed, but whoever does the ἀλήθεια (truth) comes to the φῶς (light).
+        <span class="greek-line">πᾶς γὰρ ὁ φαῦλα πράσσων μισεῖ τὸ φῶς καὶ οὐκ ἔρχεται πρὸς τὸ φῶς, ἵνα μὴ ἐλεγχθῇ τὰ ἔργα αὐτοῦ· ὁ δὲ ποιῶν τὴν ἀλήθειαν ἔρχεται πρὸς τὸ φῶς.</span>
       </div>
       <div class="btn-row">
         <a class="action-link" href="https://spirituallysmart.com/overtpsyopsai.html" target="_blank" rel="noopener">OvertPsyops.AI</a>
@@ -102,6 +197,8 @@
       'art3.jpg',
       'art4.jpg'
     ];
+
+    const STORAGE_KEY = 'overtpsyops_maze_best_v1';
 
     class DungeonAudio {
       constructor() {
@@ -203,6 +300,77 @@
         osc.stop(now + 0.13);
       }
 
+      playSoftOvertChime() {
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        [587.33, 880].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.08);
+          gain.gain.setValueAtTime(0.001, now + i * 0.08);
+          gain.gain.linearRampToValueAtTime(0.18, now + i * 0.08 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + i * 0.08 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.start(now + i * 0.08);
+          osc.stop(now + i * 0.08 + 0.36);
+        });
+      }
+
+      playCovertAlert() {
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(165, now);
+        osc.frequency.linearRampToValueAtTime(95, now + 0.28);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.32);
+      }
+
+      playWrongBuzz() {
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(125, now);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.26);
+      }
+
+      playLetterChime() {
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        [659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.06);
+          gain.gain.setValueAtTime(0.001, now + i * 0.06);
+          gain.gain.linearRampToValueAtTime(0.22, now + i * 0.06 + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0008, now + i * 0.06 + 0.4);
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.start(now + i * 0.06);
+          osc.stop(now + i * 0.06 + 0.42);
+        });
+      }
+
       playBurnWebSound() {
         if (this.muted) return;
         this.ensureContext();
@@ -282,11 +450,86 @@
     const SANCTUARY_RADIUS = 13.5;
     const FLASHLIGHT_CELL = { r: 7, c: 9 };
 
-    // Cobweb walls placed on open corridor tiles; automatically oriented across the corridor
     const FAKE_SHORTCUT_WEBS = [
       { r: 5, c: 3, hint: 'Spiderweb Wall: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
       { r: 9, c: 5, hint: 'Spiderweb Wall: "Skip the long turn here!" — Shine your flashlight (F) to clear the web.' },
       { r: 13, c: 7, hint: 'Spiderweb Wall: "Secret shortcut ahead!" — Shine your flashlight (F) to test what is real.' }
+    ];
+
+    // 7 Greek letters of ΑΛΗΘΕΙΑ (note: two identical 'Α' glyphs)
+    const TARGET_WORD = ['Α', 'Λ', 'Η', 'Θ', 'Ε', 'Ι', 'Α'];
+    const LETTER_SLOTS = [
+      { char: 'Α', r: 1, c: 7 },
+      { char: 'Λ', r: 3, c: 11 },
+      { char: 'Η', r: 7, c: 5 },
+      { char: 'Θ', r: 11, c: 3 },
+      { char: 'Ε', r: 11, c: 13 },
+      { char: 'Ι', r: 15, c: 5 },
+      { char: 'Α', r: 17, c: 13 }
+    ];
+
+    // Battery pickups near overt routes to reward careful discernment
+    const BATTERY_CELLS = [
+      { r: 5, c: 9 },
+      { r: 11, c: 9 },
+      { r: 15, c: 15 }
+    ];
+
+    // Plaque definitions (positions randomized across open corridor slots each run)
+    const PLAQUE_CANDIDATE_CELLS = [
+      { r: 1, c: 5 },
+      { r: 3, c: 9 },
+      { r: 5, c: 7 },
+      { r: 7, c: 3 },
+      { r: 9, c: 9 },
+      { r: 11, c: 7 },
+      { r: 13, c: 11 },
+      { r: 15, c: 9 },
+      { r: 17, c: 5 },
+      { r: 17, c: 11 }
+    ];
+
+    const PLAQUE_TEMPLATES = [
+      {
+        type: 'overt',
+        text: 'Open corridor ahead. Shine your light and verify. (+5% battery) ~ @TLTHE5TH',
+        outcome: { batteryDelta: 5, spiderSurge: false, trapNote: 'Verified overt sign (+5% battery).' }
+      },
+      {
+        type: 'overt',
+        text: 'Side passage turns back to main hall; verify with your beam. (+5% battery) ~ @TLTHE5TH',
+        outcome: { batteryDelta: 5, spiderSurge: false, trapNote: 'Checked overt sign (+5% battery).' }
+      },
+      {
+        type: 'overt',
+        text: 'Check the minimap before stepping forward; clear footing here. (+5% battery) ~ @TLTHE5TH',
+        outcome: { batteryDelta: 5, spiderSurge: false, trapNote: 'Overt guidance confirmed (+5% battery).' }
+      },
+      {
+        type: 'overt',
+        text: 'Hold your φῶς (light) steady on webs and spiders. (+5% battery) ~ @TLTHE5TH',
+        outcome: { batteryDelta: 5, spiderSurge: false, trapNote: 'Overt sign rewarded (+5% battery).' }
+      },
+      {
+        type: 'covert',
+        text: 'Trust us. Go this way.',
+        outcome: { batteryDelta: -15, spiderSurge: false, trapNote: 'Covert claim followed: hidden trap cost −15% battery!' }
+      },
+      {
+        type: 'covert',
+        text: 'Experts agree: the fastest shortcut is right past here.',
+        outcome: { batteryDelta: -15, spiderSurge: true, trapNote: 'Covert claim followed: spiders surge & battery drained −15%!' }
+      },
+      {
+        type: 'covert',
+        text: 'Don’t ask questions, just keep moving.',
+        outcome: { batteryDelta: -15, spiderSurge: false, trapNote: 'Covert dead-end snare followed: −15% battery!' }
+      },
+      {
+        type: 'covert',
+        text: 'Everyone says this route skips the dark.',
+        outcome: { batteryDelta: -15, spiderSurge: true, trapNote: 'Covert lure followed: red eyes close in & −15% battery!' }
+      }
     ];
 
     const bannerEl = document.getElementById('banner');
@@ -299,6 +542,53 @@
         bannerEl.style.display = 'none';
       }, durationMs);
     }
+
+    function loadBestRecord() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+
+    function saveBestRecord(rank, seconds) {
+      const rankOrder = {
+        '#OvertPsyops Agent': 4,
+        'Discerning': 3,
+        'Questioning': 2,
+        'Deceived': 1
+      };
+      const prev = loadBestRecord();
+      const betterRank = !prev || (rankOrder[rank] || 0) > (rankOrder[prev.rank] || 0);
+      const sameRankFaster = prev && rankOrder[rank] === rankOrder[prev.rank] && seconds < prev.seconds;
+      if (betterRank || sameRankFaster) {
+        const record = { rank, seconds };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
+        } catch {}
+        return record;
+      }
+      return prev;
+    }
+
+    function formatTime(sec) {
+      const mins = Math.floor(sec / 60);
+      const rem = (sec % 60).toFixed(1).padStart(4, '0');
+      return mins > 0 ? `${mins}:${rem}` : `${sec.toFixed(1)}s`;
+    }
+
+    function updateBestRecordUI() {
+      const best = loadBestRecord();
+      const el = document.getElementById('best-record');
+      if (best) {
+        el.textContent = `Your best: ${best.rank}, ${formatTime(best.seconds)}`;
+      } else {
+        el.textContent = 'Your best: None yet — earn #OvertPsyops Agent with 0 mistakes';
+      }
+    }
+    updateBestRecordUI();
 
     const scene = new THREE.Scene();
     const pitchBlack = new THREE.Color(0x000000);
@@ -493,6 +783,72 @@
       return mat;
     });
 
+    function makeGreekLetterTexture(char) {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+
+      const glow = ctx.createRadialGradient(128, 128, 14, 128, 128, 118);
+      glow.addColorStop(0, 'rgba(34, 211, 238, 0.45)');
+      glow.addColorStop(0.6, 'rgba(37, 99, 235, 0.2)');
+      glow.addColorStop(1, 'rgba(2, 6, 23, 0.05)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, 256, 256);
+
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(18, 18, 220, 220);
+
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 136px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(char, 128, 134);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function makePlaqueTexture(text, isOvert) {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 256;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = isOvert ? '#081826' : '#180c14';
+      ctx.fillRect(0, 0, 512, 256);
+
+      ctx.strokeStyle = isOvert ? '#38bdf8' : '#94a3b8';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(10, 10, 492, 236);
+
+      ctx.fillStyle = isOvert ? '#7dd3fc' : '#cbd5e1';
+      ctx.font = 'bold 22px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(isOvert ? 'OVERT PLAQUE (VERIFIABLE)' : 'WALL NOTE', 28, 48);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 27px system-ui, sans-serif';
+      const words = text.split(' ');
+      let line = '';
+      let y = 94;
+      for (const w of words) {
+        const test = line ? `${line} ${w}` : w;
+        if (ctx.measureText(test).width > 456) {
+          ctx.fillText(line, 28, y);
+          line = w;
+          y += 34;
+        } else {
+          line = test;
+        }
+      }
+      if (line) ctx.fillText(line, 28, y);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
     function makeExitSignTexture() {
       const c = document.createElement('canvas');
       c.width = 640; c.height = 320;
@@ -553,6 +909,7 @@
     ceiling.position.set(mapSize / 2 - CELL / 2, WALL_H, mapSize / 2 - CELL / 2);
     scene.add(ceiling);
 
+    // Pickup Flashlight Model
     const flashlightPickup = new THREE.Group();
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.25 });
     const lensMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
@@ -707,18 +1064,14 @@
       }
     }
 
-    // Orient cobweb wall perpendicular to corridor travel direction so it spans wall-to-wall
     function getCorridorBarrierYaw(r, c) {
       const openNorth = MAZE[r - 1]?.[c] !== 1;
       const openSouth = MAZE[r + 1]?.[c] !== 1;
       const openEast = MAZE[r]?.[c + 1] !== 1;
       const openWest = MAZE[r]?.[c - 1] !== 1;
-
-      // North-South corridor: plane normal along Z (yaw = 0) so width spans across X between walls
       if ((openNorth || openSouth) && !(openEast && openWest)) {
         return 0;
       }
-      // East-West corridor: plane normal along X (yaw = PI/2) so width spans across Z between walls
       return Math.PI / 2;
     }
 
@@ -761,19 +1114,255 @@
       });
     }
 
+    // 7 Glowing Greek Letter Collectibles (Α Λ Η Θ Ε Ι Α)
+    const letterPickups = LETTER_SLOTS.map((slot, idx) => {
+      const lx = slot.c * CELL;
+      const lz = slot.r * CELL;
+      const mat = new THREE.MeshBasicMaterial({
+        map: makeGreekLetterTexture(slot.char),
+        side: THREE.DoubleSide
+      });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.15), mat);
+      mesh.position.set(lx, 1.35, lz);
+      scene.add(mesh);
+
+      const light = new THREE.PointLight(0x38bdf8, 2.8, 5.2, 1.8);
+      light.position.set(lx, 1.45, lz);
+      scene.add(light);
+
+      return {
+        id: `letter_${idx}`,
+        char: slot.char,
+        x: lx,
+        z: lz,
+        mesh,
+        light,
+        collected: false
+      };
+    });
+
+    // Battery Pickups near overt routes (+15% battery)
+    const batteryPickups = BATTERY_CELLS.map((cell, idx) => {
+      const bx = cell.c * CELL;
+      const bz = cell.r * CELL;
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.42, 12),
+        new THREE.MeshBasicMaterial({ color: 0x34d399 })
+      );
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 0.08, 12),
+        new THREE.MeshBasicMaterial({ color: 0xfef08a })
+      );
+      cap.position.y = 0.25;
+      group.add(body, cap);
+      group.position.set(bx, 1.05, bz);
+      scene.add(group);
+
+      const light = new THREE.PointLight(0x34d399, 2.4, 4.8, 1.8);
+      light.position.set(bx, 1.25, bz);
+      scene.add(light);
+
+      return {
+        id: `bat_${idx}`,
+        x: bx,
+        z: bz,
+        group,
+        light,
+        collected: false,
+        amount: 15
+      };
+    });
+
+    // Plaques container (randomized positions & overt/covert assignments each run)
+    const plaqueGroupRoot = new THREE.Group();
+    scene.add(plaqueGroupRoot);
+    let activePlaques = [];
+
+    function pickWallDirForCell(r, c) {
+      if (MAZE[r]?.[c + 1] === 1) return { dx: 1, dz: 0, rotY: -Math.PI / 2 };
+      if (MAZE[r]?.[c - 1] === 1) return { dx: -1, dz: 0, rotY: Math.PI / 2 };
+      if (MAZE[r + 1]?.[c] === 1) return { dx: 0, dz: 1, rotY: Math.PI };
+      if (MAZE[r - 1]?.[c] === 1) return { dx: 0, dz: -1, rotY: 0 };
+      return { dx: 0, dz: -1, rotY: 0 };
+    }
+
+    function buildRandomizedPlaques() {
+      while (plaqueGroupRoot.children.length > 0) {
+        plaqueGroupRoot.remove(plaqueGroupRoot.children[0]);
+      }
+      activePlaques = [];
+
+      const shuffledCells = [...PLAQUE_CANDIDATE_CELLS].sort(() => Math.random() - 0.5);
+      const shuffledTemplates = [...PLAQUE_TEMPLATES].sort(() => Math.random() - 0.5);
+      const count = Math.min(shuffledCells.length, shuffledTemplates.length);
+
+      for (let i = 0; i < count; i++) {
+        const cell = shuffledCells[i];
+        const tpl = shuffledTemplates[i];
+        const isOvert = tpl.type === 'overt';
+        const cx = cell.c * CELL;
+        const cz = cell.r * CELL;
+        const dir = pickWallDirForCell(cell.r, cell.c);
+
+        const tex = makePlaqueTexture(tpl.text, isOvert);
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.75, 0.88),
+          new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })
+        );
+        mesh.position.set(cx + dir.dx * 1.45, 1.72, cz + dir.dz * 1.45);
+        mesh.rotation.y = dir.rotY;
+        plaqueGroupRoot.add(mesh);
+
+        // Follow-through zone slightly further down the corridor triggers covert/overt outcome on choice
+        const followX = cx - dir.dx * 1.35;
+        const followZ = cz - dir.dz * 1.35;
+
+        activePlaques.push({
+          id: `plaque_${i}`,
+          cell,
+          x: cx,
+          z: cz,
+          followX,
+          followZ,
+          text: tpl.text,
+          type: tpl.type,
+          outcome: { ...tpl.outcome },
+          read: false,
+          followedTriggered: false,
+          lastReadBannerTime: 0
+        });
+      }
+    }
+
     const player = {
       x: 1 * CELL,
       z: 1 * CELL,
       yaw: 0,
       hasFlashlight: false,
       flashlightOn: false,
+      battery: 100,
+      batteryDrainAccum: 0,
+      collectedLetters: [],
+      covertFollowed: 0,
+      wrongKeypadEntries: 0,
       won: false,
+      keypadOpen: false,
       startTime: 0,
       escapeSeconds: 0
     };
     camera.position.set(player.x, 1.65, player.z);
 
+    const batteryValEl = document.getElementById('battery-val');
+    const lettersValEl = document.getElementById('letters-val');
+    const collectedListEl = document.getElementById('collected-list');
+    const timerValEl = document.getElementById('timer-val');
     const sanctuaryLinksEl = document.getElementById('sanctuary-links');
+    const keypadModalEl = document.getElementById('keypad-modal');
+    const keypadDisplayEl = document.getElementById('keypad-display');
+    const keypadMsgEl = document.getElementById('keypad-msg');
+
+    let keypadInput = '';
+    let keypadCooldownUntil = 0;
+
+    function refreshHudStats(elapsedSec) {
+      const pct = Math.max(0, Math.round(player.battery));
+      batteryValEl.textContent = `${pct}%`;
+      batteryValEl.classList.toggle('low', pct <= 20);
+
+      lettersValEl.textContent = `${player.collectedLetters.length}/7`;
+      collectedListEl.textContent = player.collectedLetters.length > 0
+        ? `[${player.collectedLetters.join(' ')}]`
+        : '';
+      timerValEl.textContent = formatTime(elapsedSec);
+    }
+
+    function openKeypad() {
+      player.keypadOpen = true;
+      keypadInput = '';
+      keypadDisplayEl.textContent = '';
+      keypadMsgEl.textContent = '';
+      document.exitPointerLock?.();
+      keypadModalEl.style.display = 'flex';
+    }
+
+    function closeKeypad() {
+      player.keypadOpen = false;
+      keypadModalEl.style.display = 'none';
+      if (!player.won) {
+        renderer.domElement.requestPointerLock?.();
+      }
+    }
+
+    document.querySelectorAll('.greek-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (keypadInput.length >= 7) return;
+        keypadInput += btn.dataset.char;
+        keypadDisplayEl.textContent = keypadInput;
+        keypadMsgEl.textContent = '';
+        audio.playPickupClick();
+      });
+    });
+
+    document.getElementById('kp-backspace').addEventListener('click', () => {
+      keypadInput = keypadInput.slice(0, -1);
+      keypadDisplayEl.textContent = keypadInput;
+      keypadMsgEl.textContent = '';
+    });
+
+    document.getElementById('kp-clear').addEventListener('click', () => {
+      keypadInput = '';
+      keypadDisplayEl.textContent = '';
+      keypadMsgEl.textContent = '';
+    });
+
+    document.getElementById('kp-close').addEventListener('click', () => {
+      closeKeypad();
+    });
+
+    function computeRank(mistakes) {
+      if (mistakes === 0) return '#OvertPsyops Agent';
+      if (mistakes <= 2) return 'Discerning';
+      if (mistakes <= 5) return 'Questioning';
+      return 'Deceived';
+    }
+
+    document.getElementById('kp-submit').addEventListener('click', () => {
+      if (keypadInput === TARGET_WORD.join('')) {
+        player.keypadOpen = false;
+        keypadModalEl.style.display = 'none';
+        player.won = true;
+        player.escapeSeconds = player.startTime ? (performance.now() - player.startTime) / 1000 : 0;
+
+        const mistakes = player.covertFollowed + player.wrongKeypadEntries;
+        const rank = computeRank(mistakes);
+        saveBestRecord(rank, player.escapeSeconds);
+        updateBestRecordUI();
+
+        // Flood sanctuary with bright light
+        scene.background.copy(brightBg);
+        scene.fog.color.copy(brightBg);
+        scene.fog.density = 0.008;
+        ambientLight.intensity = 3.2;
+
+        audio.playVictoryChime();
+        document.getElementById('overlay-title').textContent = 'Sanctuary Unlocked — OvertPsyops.AI';
+        document.getElementById('overlay-text').innerHTML =
+          `<strong>@TLTHE5TH</strong> • Spelled <strong>ΑΛΗΘΕΙΑ</strong> in <strong>${formatTime(player.escapeSeconds)}</strong><br>` +
+          `Rank: <strong>${rank}</strong> (Covert followed: ${player.covertFollowed}, Wrong entries: ${player.wrongKeypadEntries})`;
+        startBtn.textContent = 'Play Again';
+        sanctuaryLinksEl.style.display = 'block';
+        overlay.style.display = 'flex';
+      } else {
+        player.wrongKeypadEntries += 1;
+        player.battery = Math.max(0, player.battery - 10);
+        keypadInput = '';
+        keypadDisplayEl.textContent = '';
+        keypadMsgEl.textContent = 'That is not the word that sets you free. (−10% battery)';
+        audio.playWrongBuzz();
+        refreshHudStats(player.startTime ? (performance.now() - player.startTime) / 1000 : 0);
+      }
+    });
 
     function resetGame() {
       player.x = 1 * CELL;
@@ -781,12 +1370,21 @@
       player.yaw = 0;
       player.hasFlashlight = false;
       player.flashlightOn = false;
+      player.battery = 100;
+      player.batteryDrainAccum = 0;
+      player.collectedLetters = [];
+      player.covertFollowed = 0;
+      player.wrongKeypadEntries = 0;
       player.won = false;
+      player.keypadOpen = false;
       player.startTime = performance.now();
       player.escapeSeconds = 0;
+      keypadCooldownUntil = 0;
+
       flashlight.intensity = 0;
       flashlightPickup.visible = true;
       pickupBeaconLight.intensity = 4.5;
+      keypadModalEl.style.display = 'none';
       sanctuaryLinksEl.style.display = 'none';
 
       for (const sp of spiders) {
@@ -802,13 +1400,25 @@
         b.group.scale.set(1, 1, 1);
         b.glow.intensity = 1.4;
       }
+      for (const lp of letterPickups) {
+        lp.collected = false;
+        lp.mesh.visible = true;
+        lp.light.intensity = 2.8;
+      }
+      for (const bp of batteryPickups) {
+        bp.collected = false;
+        bp.group.visible = true;
+        bp.light.intensity = 2.4;
+      }
 
+      buildRandomizedPlaques();
+      refreshHudStats(0);
       document.getElementById('status').textContent = 'Note: It is pitch black—find the flashlight deeper in the dark! Watch for glowing red eyes.';
       audio.startCreepyMusic();
     }
 
     function isInFlashlightBeam(targetX, targetZ, maxDist) {
-      if (!player.hasFlashlight || !player.flashlightOn || player.won) return false;
+      if (!player.hasFlashlight || !player.flashlightOn || player.battery <= 0 || player.won) return false;
       const toX = targetX - player.x;
       const toZ = targetZ - player.z;
       const dist = Math.hypot(toX, toZ);
@@ -843,11 +1453,18 @@
     const keys = {};
     window.addEventListener('keydown', (e) => {
       keys[e.code] = true;
+      if (player.keypadOpen) return;
+
       if (e.code === 'KeyF' && player.hasFlashlight && !player.won) {
+        if (player.battery <= 0) {
+          player.flashlightOn = false;
+          showBanner('Flashlight battery is at 0%—find a battery cell near overt signs!', 3000);
+          return;
+        }
         player.flashlightOn = !player.flashlightOn;
         audio.playPickupClick();
         document.getElementById('status').textContent = player.flashlightOn
-          ? 'Flashlight ON (Press F to toggle) — Follow the path to OvertPsyops.AI • @TLTHE5TH'
+          ? 'Flashlight ON (Press F to toggle) — Collect all 7 letters of ΑΛΗΘΕΙΑ • OvertPsyops.AI • @TLTHE5TH'
           : 'Flashlight OFF (Press F to turn back on) — Red eyes glow in the dark';
       }
       if (e.code === 'KeyM') {
@@ -864,10 +1481,9 @@
 
     startBtn.addEventListener('click', () => {
       sanctuaryLinksEl.style.display = 'none';
-      if (player.won) {
+      if (player.won || !player.startTime) {
         resetGame();
       } else {
-        if (!player.startTime) player.startTime = performance.now();
         audio.startCreepyMusic();
       }
       overlay.style.display = 'none';
@@ -875,18 +1491,18 @@
     });
 
     document.addEventListener('pointerlockchange', () => {
-      if (document.pointerLockElement !== renderer.domElement && !player.won) {
+      if (document.pointerLockElement !== renderer.domElement && !player.won && !player.keypadOpen) {
         audio.stopCreepyMusic(0.2);
         sanctuaryLinksEl.style.display = 'none';
         document.getElementById('overlay-title').textContent = 'Paused';
-        document.getElementById('overlay-text').textContent = 'Click below to resume walking.';
+        document.getElementById('overlay-text').textContent = 'Click below to resume Operation Φῶς (Light).';
         startBtn.textContent = 'Resume';
         overlay.style.display = 'flex';
       }
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (document.pointerLockElement === renderer.domElement) {
+      if (document.pointerLockElement === renderer.domElement && !player.keypadOpen) {
         player.yaw -= e.movementX * 0.0024;
       }
     });
@@ -925,6 +1541,15 @@
         }
       }
 
+      for (const lp of letterPickups) {
+        if (!lp.collected) {
+          mctx.fillStyle = '#38bdf8';
+          mctx.beginPath();
+          mctx.arc((lp.x / CELL + 0.5) * s, (lp.z / CELL + 0.5) * s, s * 0.22, 0, Math.PI * 2);
+          mctx.fill();
+        }
+      }
+
       if (!player.hasFlashlight) {
         mctx.fillStyle = '#fef08a';
         mctx.beginPath();
@@ -943,8 +1568,8 @@
     }
 
     function getShareLine() {
-      const timeStr = player.escapeSeconds > 0 ? ` in ${player.escapeSeconds.toFixed(1)}s` : '';
-      return `Escaped the 3D dungeon labyrinth${timeStr}—from pitch dark & red spider eyes into the light of OvertPsyops.AI (@TLTHE5TH). Play free: tlthe5th.github.io/3d-maze #OvertPsyops`;
+      const timeStr = player.escapeSeconds > 0 ? ` in ${formatTime(player.escapeSeconds)}` : '';
+      return `Completed Operation Φῶς (Light) in the 3D dungeon maze${timeStr}, spelled ΑΛΗΘΕΙΑ, and reached OvertPsyops.AI (@TLTHE5TH). Play free: tlthe5th.github.io/3d-maze #OvertPsyops`;
     }
 
     document.getElementById('share-x-btn').addEventListener('click', () => {
@@ -975,6 +1600,22 @@
       if (flashlightPickup.visible) {
         flashlightPickup.rotation.y = t * 1.8;
         flashlightPickup.position.y = 0.95 + Math.sin(t * 3) * 0.08;
+      }
+
+      for (const lp of letterPickups) {
+        if (!lp.collected) {
+          lp.mesh.lookAt(camera.position.x, lp.mesh.position.y, camera.position.z);
+          const pulse = 1 + Math.sin(t * 4) * 0.08;
+          lp.mesh.scale.set(pulse, pulse, 1);
+          lp.light.intensity = 2.4 + Math.sin(t * 5) * 0.8;
+        }
+      }
+
+      for (const bp of batteryPickups) {
+        if (!bp.collected) {
+          bp.group.rotation.y = t * 2.2;
+          bp.group.position.y = 1.05 + Math.sin(t * 3.5) * 0.06;
+        }
       }
 
       let nearestSpiderDist = Infinity;
@@ -1037,7 +1678,7 @@
         }
       }
 
-      if (!player.won) {
+      if (!player.won && !player.keypadOpen) {
         const turnSpeed = 2.2;
         if (keys['KeyQ']) player.yaw += turnSpeed * dt;
         if (keys['KeyE']) player.yaw -= turnSpeed * dt;
@@ -1059,6 +1700,20 @@
         camera.position.set(player.x, 1.65, player.z);
         camera.rotation.y = player.yaw;
 
+        // Flashlight drain: ~1% every 3 seconds when active
+        if (player.hasFlashlight && player.flashlightOn && player.battery > 0) {
+          player.batteryDrainAccum += dt;
+          if (player.batteryDrainAccum >= 3.0) {
+            player.batteryDrainAccum -= 3.0;
+            player.battery = Math.max(0, player.battery - 1);
+            if (player.battery === 0) {
+              player.flashlightOn = false;
+              showBanner('Battery at 0%! Darkness closes in—find a battery cell near overt signs.', 4200);
+            }
+          }
+        }
+
+        // Flashlight pickup
         if (!player.hasFlashlight && Math.hypot(player.x - pickupX, player.z - pickupZ) < 1.55) {
           player.hasFlashlight = true;
           player.flashlightOn = true;
@@ -1069,10 +1724,80 @@
             '<strong>Flashlight Found!</strong><br>Ψαλμοί (Psalms) 118:105: Your λόγος (word) is a λύχνος (lamp) to my feet and a φῶς (light) to my path. Press <strong>F</strong> to toggle.',
             5500
           );
-          document.getElementById('status').textContent = 'Flashlight ON (Press F) — Shine on spiderweb walls & spiders • Find OvertPsyops.AI • @TLTHE5TH';
+          document.getElementById('status').textContent = 'Flashlight ON (Press F) — Find all 7 letters of ΑΛΗΘΕΙΑ • OvertPsyops.AI • @TLTHE5TH';
+        }
+
+        // Battery pickups (+15%)
+        for (const bp of batteryPickups) {
+          if (!bp.collected && Math.hypot(player.x - bp.x, player.z - bp.z) < CELL * 0.95) {
+            bp.collected = true;
+            bp.group.visible = false;
+            bp.light.intensity = 0;
+            player.battery = Math.min(100, player.battery + bp.amount);
+            audio.playSoftOvertChime();
+            showBanner(`Battery cell recovered (+${bp.amount}% battery) — now at ${Math.round(player.battery)}%.`, 3200);
+          }
+        }
+
+        // 7 Greek letter pickups (~1 tile radius)
+        for (const lp of letterPickups) {
+          if (!lp.collected && Math.hypot(player.x - lp.x, player.z - lp.z) < CELL * 0.95) {
+            lp.collected = true;
+            lp.mesh.visible = false;
+            lp.light.intensity = 0;
+            player.collectedLetters.push(lp.char);
+            audio.playLetterChime();
+            showBanner(`Collected Greek letter <strong>${lp.char}</strong> (${player.collectedLetters.length}/7).`, 3200);
+          }
+        }
+
+        // Plaque reading & choice-triggered covert consequences
+        for (const pl of activePlaques) {
+          const distPlaque = Math.hypot(player.x - pl.x, player.z - pl.z);
+          if (distPlaque < 2.2) {
+            if (!pl.read) {
+              pl.read = true;
+              pl.lastReadBannerTime = now;
+              if (pl.type === 'overt') {
+                player.battery = Math.min(100, player.battery + pl.outcome.batteryDelta);
+                audio.playSoftOvertChime();
+                showBanner(`<strong>Overt Plaque:</strong> "${pl.text}"<br><span style="color:#67e8f9">${pl.outcome.trapNote}</span>`, 4500);
+              } else {
+                audio.playPickupClick();
+                showBanner(`<strong>Wall Plaque:</strong> "${pl.text}"`, 4200);
+              }
+            } else if (now - pl.lastReadBannerTime > 6500) {
+              pl.lastReadBannerTime = now;
+              showBanner(`<strong>Wall Plaque:</strong> "${pl.text}"`, 3500);
+            }
+          }
+
+          // Consequence fires only when the player follows a covert plaque into its follow-through zone
+          if (pl.type === 'covert' && !pl.followedTriggered && Math.hypot(player.x - pl.followX, player.z - pl.followZ) < 1.35) {
+            pl.followedTriggered = true;
+            player.covertFollowed += 1;
+            player.battery = Math.max(0, player.battery + pl.outcome.batteryDelta);
+            audio.playCovertAlert();
+            showBanner(`<strong>Covert Trap!</strong> ${pl.outcome.trapNote}`, 4500);
+
+            if (pl.outcome.spiderSurge) {
+              for (const sp of spiders) {
+                if (Math.hypot(sp.x - player.x, sp.z - player.z) < 18) {
+                  const toPX = player.x - sp.x;
+                  const toPZ = player.z - sp.z;
+                  const len = Math.hypot(toPX, toPZ) || 1;
+                  const stepX = (toPX / len) * 2.2;
+                  const stepZ = (toPZ / len) * 2.2;
+                  if (canMoveTo(sp.x + stepX, sp.z)) sp.x += stepX;
+                  if (canMoveTo(sp.x, sp.z + stepZ)) sp.z += stepZ;
+                }
+              }
+            }
+          }
         }
 
         const distToExit = Math.hypot(player.x - exitPos.x, player.z - exitPos.z);
+        const batteryFactor = player.battery > 0 ? 1 : 0.15;
         const lightFactor = THREE.MathUtils.clamp(1 - (distToExit / (SANCTUARY_RADIUS + 4)), 0, 1);
 
         scene.background.lerpColors(pitchBlack, brightBg, lightFactor * 0.8);
@@ -1080,23 +1805,24 @@
         scene.fog.density = THREE.MathUtils.lerp(0.085, 0.012, lightFactor);
 
         ambientLight.intensity = lightFactor * 2.5;
-        faintSenseLight.intensity = player.hasFlashlight ? 0.1 : 0.4;
-        flashlight.intensity = player.flashlightOn
-          ? THREE.MathUtils.lerp(26 + Math.sin(t * 14) * 1.2, 8, lightFactor)
+        faintSenseLight.intensity = player.battery <= 0 ? 0.08 : (player.hasFlashlight ? 0.1 : 0.4);
+        flashlight.intensity = (player.flashlightOn && player.battery > 0)
+          ? THREE.MathUtils.lerp((26 + Math.sin(t * 14) * 1.2) * batteryFactor, 8 * batteryFactor, lightFactor)
           : 0;
 
-        if (distToExit < 1.65) {
-          player.won = true;
-          player.escapeSeconds = player.startTime ? (now - player.startTime) / 1000 : 0;
-          audio.playVictoryChime();
-          document.exitPointerLock?.();
-          document.getElementById('overlay-title').textContent = 'OvertPsyops.AI';
-          document.getElementById('overlay-text').innerHTML =
-            `<strong>@TLTHE5TH</strong><br>You escaped the dungeon into the light in <strong>${player.escapeSeconds.toFixed(1)}s</strong>.`;
-          startBtn.textContent = 'Play Again';
-          sanctuaryLinksEl.style.display = 'block';
-          overlay.style.display = 'flex';
+        if (distToExit < 1.75 && now > keypadCooldownUntil) {
+          keypadCooldownUntil = now + 2200;
+          if (player.collectedLetters.length < 7) {
+            showBanner(
+              `Sanctuary Door Locked: Collect all 7 letters of <strong>ΑΛΗΘΕΙΑ</strong> first (${player.collectedLetters.length}/7 collected).`,
+              3800
+            );
+          } else {
+            openKeypad();
+          }
         }
+
+        refreshHudStats(player.startTime ? (now - player.startTime) / 1000 : 0);
       }
 
       drawMinimap(nearSpider, t);
