@@ -1358,7 +1358,7 @@
       spiders.push({ group, legs, floor: floorNum, baseY: y, originX: x, originZ: z, x, z, phase: Math.random() * Math.PI * 2, scatterTimer: 0 });
     }
 
-    function mountArtworkOnWall(wx, wz, dirX, dirZ) {
+    function mountArtworkOnWall(wx, wz, dirX, dirZ, baseY = 0) {
       const mat = artMaterials[artIndex % artMaterials.length];
       artIndex++;
       const panelW = CELL - 0.16;
@@ -1368,7 +1368,7 @@
       const canvasMesh = new THREE.Mesh(new THREE.PlaneGeometry(panelW, panelH), mat);
       canvasMesh.position.z = 0.035;
       holder.add(frame, canvasMesh);
-      holder.position.set(wx + dirX * (CELL / 2 + 0.04), WALL_H / 2, wz + dirZ * (CELL / 2 + 0.04));
+      holder.position.set(wx + dirX * (CELL / 2 + 0.04), baseY + WALL_H / 2, wz + dirZ * (CELL / 2 + 0.04));
       if (dirX === 1) holder.rotation.y = Math.PI / 2;
       if (dirX === -1) holder.rotation.y = -Math.PI / 2;
       if (dirZ === -1) holder.rotation.y = Math.PI;
@@ -1388,10 +1388,10 @@
           scene.add(wall);
 
           if (!nearSanctuary && (r + c) % 3 === 0) {
-            if (MAZE[r][c + 1] === 0) mountArtworkOnWall(x, z, 1, 0);
-            else if (MAZE[r][c - 1] === 0) mountArtworkOnWall(x, z, -1, 0);
-            else if (MAZE[r + 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, 1);
-            else if (MAZE[r - 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, -1);
+            if (MAZE[r][c + 1] === 0) mountArtworkOnWall(x, z, 1, 0, 0);
+            else if (MAZE[r][c - 1] === 0) mountArtworkOnWall(x, z, -1, 0, 0);
+            else if (MAZE[r + 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, 1, 0);
+            else if (MAZE[r - 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, -1, 0);
           }
         } else if (MAZE[r][c] === 0 && !nearSanctuary) {
           if ((r * 7 + c * 13) % 3 === 0) {
@@ -1426,8 +1426,23 @@
           const bWall = new THREE.Mesh(wallGeo, basementWallMat);
           bWall.position.set(x, BASEMENT_Y + WALL_H / 2, z);
           scene.add(bWall);
-        } else if (BASEMENT_MAZE[r][c] === 0 && (r * 3 + c * 7) % 11 === 0) {
-          createSpider(x, BASEMENT_Y + 0.02, z, Math.random() * Math.PI * 2, 2);
+
+          if ((r + c) % 3 === 0) {
+            if (BASEMENT_MAZE[r][c + 1] === 0) mountArtworkOnWall(x, z, 1, 0, BASEMENT_Y);
+            else if (BASEMENT_MAZE[r][c - 1] === 0) mountArtworkOnWall(x, z, -1, 0, BASEMENT_Y);
+            else if (BASEMENT_MAZE[r + 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, 1, BASEMENT_Y);
+            else if (BASEMENT_MAZE[r - 1]?.[c] === 0) mountArtworkOnWall(x, z, 0, -1, BASEMENT_Y);
+          }
+        } else if (BASEMENT_MAZE[r][c] === 0) {
+          if ((r * 5 + c * 11) % 4 === 0) {
+            const bWeb = new THREE.Mesh(webGeo, webMat);
+            bWeb.position.set(x - 1.1, BASEMENT_Y + WALL_H - 0.85, z - 1.1);
+            bWeb.rotation.y = ((r + c) % 4) * (Math.PI / 2);
+            scene.add(bWeb);
+          }
+          if ((r * 3 + c * 7) % 11 === 0) {
+            createSpider(x, BASEMENT_Y + 0.02, z, Math.random() * Math.PI * 2, 2);
+          }
         }
       }
     }
