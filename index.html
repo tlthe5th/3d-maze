@@ -65,12 +65,9 @@
     button:hover, a.action-link:hover { background: #1d4ed8; }
     button.secondary { background: #1e293b; border: 1px solid rgba(255,255,255,0.2); }
     button.secondary:hover { background: #334155; }
-    button.laugh-btn { background: #d97706; color: #09090b; }
-    button.laugh-btn:hover { background: #f59e0b; }
     a.action-link.alt { background: #0f766e; }
     a.action-link.alt:hover { background: #0d9488; }
 
-    /* Shared Encounter / Room Modal */
     .modal-backdrop {
       position: fixed; inset: 0; z-index: 25;
       display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -91,7 +88,6 @@
     .choice-btn:hover { background: #1e293b; border-color: #38bdf8; }
     .modal-feedback { min-height: 22px; margin-top: 8px; font-size: 13px; color: #fde68a; font-weight: 500; }
 
-    /* ΑΛΗΘΕΙΑ Keypad */
     #keypad-display {
       min-height: 48px; background: #020617; border: 1px solid rgba(56, 189, 248, 0.45);
       border-radius: 8px; padding: 10px 14px; font-size: 24px; letter-spacing: 6px;
@@ -104,7 +100,6 @@
     .keypad-ctrl-row { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 8px; }
     #keypad-msg { min-height: 22px; margin-top: 10px; font-size: 13.5px; color: #fca5a5; font-weight: 500; }
 
-    /* Collection & End Screen */
     .collection-panel {
       max-width: 680px; width: 100%; background: rgba(11, 17, 32, 0.9);
       border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 10px;
@@ -141,7 +136,7 @@
 </head>
 <body>
   <div id="hud">
-    <div><strong>Controls:</strong> WASD/Arrows Walk • Mouse/Q/E Look • <strong>E/L</strong> Interact/Lever • <strong>F</strong> Flashlight • <strong>H</strong> Laugh • <strong>M</strong> Mute</div>
+    <div><strong>Controls:</strong> WASD/Arrows Walk • Mouse/Q/E Look • <strong>E/L</strong> Interact/Lever • <strong>F</strong> Flashlight • <strong>H</strong> Laugh • <strong>M</strong> Mute • <strong>Esc</strong> Close Prompt</div>
     <div class="stats-row">
       <div>Floor: <span id="floor-val">1 (Upper)</span></div>
       <div>Level: <span id="level-val">1: Awareness</span></div>
@@ -157,20 +152,18 @@
   <div id="banner"></div>
   <canvas id="minimap" width="190" height="190"></canvas>
 
-  <!-- Generic Room Encounter Modal -->
   <div id="room-modal" class="modal-backdrop">
     <div class="modal-card">
       <h2 id="room-title">Chamber</h2>
       <div id="room-sub" class="modal-sub"></div>
       <div id="room-choices" class="choice-list"></div>
       <div class="btn-row">
-        <button type="button" id="room-close-btn" class="secondary">Step Back</button>
+        <button type="button" id="room-close-btn" class="secondary">Step Back (Esc)</button>
       </div>
       <div id="room-feedback" class="modal-feedback"></div>
     </div>
   </div>
 
-  <!-- ΑΛΗΘΕΙΑ Keypad Modal -->
   <div id="keypad-modal" class="modal-backdrop">
     <div class="modal-card">
       <h2>Sanctuary Door — Spell the Word</h2>
@@ -195,7 +188,7 @@
         <button type="button" id="kp-submit">Unlock</button>
       </div>
       <div class="btn-row" style="margin-top: 10px;">
-        <button type="button" id="kp-close" class="secondary">Step Back</button>
+        <button type="button" id="kp-close" class="secondary">Step Back (Esc)</button>
       </div>
       <div id="keypad-msg"></div>
     </div>
@@ -281,7 +274,6 @@
   <script type="module">
     import * as THREE from 'three';
 
-    // Put your uploaded image filenames here (must match exact names in the repo)
     const ART_FILES = [
       'art1.jpg',
       'art2.jpg',
@@ -474,7 +466,6 @@
       }
     ];
 
-    // Seeded PRNG (mulberry32) so Daily Maze & Custom Seeds are reproducible
     function hashSeed(str) {
       let h = 2166136261 >>> 0;
       for (let i = 0; i < str.length; i++) {
@@ -504,7 +495,6 @@
 
     let rng = createRng(getDailySeedString());
 
-    // LocalStorage helpers for Word Cards & Badges
     function loadStringSet(key) {
       try {
         const arr = JSON.parse(localStorage.getItem(key) || '[]');
@@ -728,7 +718,6 @@
 
     const audio = new DungeonAudio();
 
-    // 19x19 Upper Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary, 3 = Secret Lever-Opened Gate
     const MAZE = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
@@ -751,7 +740,6 @@
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
 
-    // 19x19 Basement Maze (Floor 2): 1 = Wall, 0 = Corridor, 4 = Stairwell Up (opens via basement lever)
     const BASEMENT_MAZE = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,0,0,1,0,0,0,0,0,0,4,0,0,0,0,1],
@@ -786,7 +774,6 @@
     const BASEMENT_STAIRS_CELL = { r: 1, c: 13 };
     const STAIRS_RETURN_CELL = { r: 1, c: 7 };
 
-    // Suppression Corridor corridor coordinates on Floor 1
     const SUPPRESSION_CORRIDOR_CELLS = [
       { r: 17, c: 1 }, { r: 17, c: 2 }, { r: 17, c: 3 }, { r: 17, c: 4 },
       { r: 17, c: 5 }, { r: 17, c: 6 }, { r: 17, c: 7 }, { r: 17, c: 8 }, { r: 17, c: 9 }
@@ -864,7 +851,6 @@
       }
     ];
 
-    // Room Nodes across Floor 1 and Floor 2
     const ROOM_NODES = [
       { id: 'moth', kind: 'moth', r: 3, c: 5, floor: 1, title: '🦋 The Moth Chamber', color: 0xfbbf24, solved: false },
       { id: 'nobodies_1', kind: 'nobody', r: 1, c: 3, floor: 1, title: '🏮 Nobody Lantern-Bearer #1', color: 0xfde047, solved: false },
@@ -1168,7 +1154,6 @@
     basementCeiling.position.set(mapSize / 2 - CELL / 2, BASEMENT_Y + WALL_H, mapSize / 2 - CELL / 2);
     scene.add(basementCeiling);
 
-    // Weak / Trap Floor Tile near Flashlight (r: 7, c: 8)
     const fallTileMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(CELL * 0.75, CELL * 0.75),
       new THREE.MeshStandardMaterial({ color: 0x3f2d20, emissive: new THREE.Color(0x451a03), emissiveIntensity: 0.35, roughness: 0.95 })
@@ -1177,7 +1162,6 @@
     fallTileMesh.position.set(FALL_FLOOR_CELL.c * CELL, 0.02, FALL_FLOOR_CELL.r * CELL);
     scene.add(fallTileMesh);
 
-    // Pickup Flashlight Model
     const flashlightPickup = new THREE.Group();
     const barrelMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.25 });
     const lensMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
@@ -1195,7 +1179,6 @@
     pickupBeaconLight.position.set(pickupX, 1.15, pickupZ);
     scene.add(pickupBeaconLight);
 
-    // Floor 1 Secret Gate & Lever
     const secretGateMesh = new THREE.Mesh(new THREE.BoxGeometry(CELL, WALL_H, CELL), gateWallMat);
     secretGateMesh.position.set(SECRET_GATE_CELL.c * CELL, WALL_H / 2, SECRET_GATE_CELL.r * CELL);
     scene.add(secretGateMesh);
@@ -1213,7 +1196,6 @@
     leverLight.position.set(SECRET_LEVER_CELL.c * CELL, 1.5, SECRET_LEVER_CELL.r * CELL - 1.1);
     scene.add(leverLight);
 
-    // Floor 2 Basement Lever & Stairwell
     const basementLeverGroup = new THREE.Group();
     const bLeverBase = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 0.24), new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.5 }));
     const bLeverHandleMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: new THREE.Color(0xd97706), emissiveIntensity: 0.5, roughness: 0.35 });
@@ -1244,7 +1226,6 @@
     stairsBarrierMesh.position.set(BASEMENT_STAIRS_CELL.c * CELL, BASEMENT_Y + WALL_H * 0.425, BASEMENT_STAIRS_CELL.r * CELL + 1.2);
     scene.add(stairsBarrierMesh);
 
-    // Spooky Basement Decorations: Coffins, Ditches, Shovels
     const spookyGroup = new THREE.Group();
     const coffinMat = new THREE.MeshStandardMaterial({ color: 0x291812, roughness: 0.88 });
     const ditchMat = new THREE.MeshStandardMaterial({ color: 0x030304, roughness: 1.0 });
@@ -1296,7 +1277,6 @@
     addShovel(15, 9, 0.9);
     scene.add(spookyGroup);
 
-    // Wall-Phasing Ghost on Floor 2
     const ghostGroup = new THREE.Group();
     const ghostMat = new THREE.MeshBasicMaterial({ color: 0xcbd5e1, transparent: true, opacity: 0.42, depthWrite: false });
     const ghostHead = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 14), ghostMat);
@@ -1312,7 +1292,6 @@
     ghostGroup.position.set(9 * CELL, BASEMENT_Y + 0.1, 9 * CELL);
     scene.add(ghostGroup);
 
-    // Visual markers for all 12 Room Nodes
     const roomVisuals = ROOM_NODES.map((node) => {
       const yBase = node.floor === 2 ? BASEMENT_Y : 0;
       const group = new THREE.Group();
@@ -1507,7 +1486,7 @@
       const light = new THREE.PointLight(0x34d399, 2.4, 4.8, 1.8);
       light.position.set(bx, by + 0.2, bz);
       scene.add(light);
-      return { id: `bat_${idx}`, floor: cell.floor, x: bx, z: bz, group, light, collected: false, amount: 20 };
+      return { id: `bat_${idx}`, floor: cell.floor, x: bx, z: bz, group, light, collected: false, amount: 25 };
     });
 
     const plaqueGroupRoot = new THREE.Group();
@@ -1531,6 +1510,7 @@
       yaw: 0,
       hasFlashlight: false,
       flashlightOn: false,
+      emergencySparkUsed: false,
       leverPulled: false,
       basementLeverPulled: false,
       floorBroken: false,
@@ -1596,7 +1576,6 @@
         const isOvert = tpl.type === 'overt';
         let displayText = tpl.text;
 
-        // Higher levels add fake overt-looking signatures on covert plaques
         if (!isOvert && player.level >= 2) {
           const fakeSigs = [
             ' (Verified Official ~ @TLTHE5TH)',
@@ -1636,16 +1615,17 @@
       }
     }
 
-    // Room Encounter Modal Controller
     const roomModalEl = document.getElementById('room-modal');
     const roomTitleEl = document.getElementById('room-title');
     const roomSubEl = document.getElementById('room-sub');
     const roomChoicesEl = document.getElementById('room-choices');
     const roomFeedbackEl = document.getElementById('room-feedback');
     let activeRoomNode = null;
+    let lastTriggeredRoomId = null;
 
     function openRoomModal(node) {
       activeRoomNode = node;
+      lastTriggeredRoomId = node.id;
       player.modalOpen = true;
       document.exitPointerLock?.();
       roomTitleEl.textContent = node.title;
@@ -1679,7 +1659,7 @@
           if (player.nobodiesRescued >= 3) {
             awardBadge('lightbearer');
           }
-          setTimeout(closeRoomModal, 750);
+          setTimeout(closeRoomModal, 600);
         });
       } else if (node.kind === 'moth') {
         roomSubEl.textContent =
@@ -1696,7 +1676,7 @@
           awardWordCard('phos');
           audio.playSoftOvertChime();
           roomFeedbackEl.textContent = 'True lamp verified! Moths scatter and φῶς (light) word card unlocked.';
-          setTimeout(closeRoomModal, 800);
+          setTimeout(closeRoomModal, 650);
         });
         addChoice('<strong>Violet Pulse Lamp:</strong> "Everyone swarms here automatically."', () => {
           player.battery = Math.max(0, player.battery - 15);
@@ -1712,7 +1692,7 @@
           awardWordCard('syneidesis');
           audio.playSoftOvertChime();
           roomFeedbackEl.textContent = 'The mirror clears! συνείδησις (conscience) card unlocked.';
-          setTimeout(closeRoomModal, 800);
+          setTimeout(closeRoomModal, 650);
         });
         addChoice('<strong>Flattering / Prideful Answer:</strong> "Never. My instincts are flawless and beyond question."', () => {
           player.covertFollowed += 1;
@@ -1730,12 +1710,11 @@
               awardWordCard('logos');
               audio.playSoftOvertChime();
               roomFeedbackEl.textContent = 'λόγος (logic) verified! Terminal unlocked.';
-              setTimeout(closeRoomModal, 800);
+              setTimeout(closeRoomModal, 650);
             } else {
               player.logicErrors += 1;
               player.covertFollowed += 1;
               audio.playWrongBuzz();
-              // Summon a spider near the player
               createSpider(player.x + 1.5, player.floor === 2 ? BASEMENT_Y + 0.02 : 0.02, player.z + 1.5, 0, player.floor);
               roomFeedbackEl.textContent = 'Illogical choice! A spider was summoned nearby.';
             }
@@ -1755,14 +1734,14 @@
           awardWordCard('aletheia');
           audio.playSoftOvertChime();
           roomFeedbackEl.textContent = 'True parable discerned! ἀλήθεια (truth) card unlocked.';
-          setTimeout(closeRoomModal, 800);
+          setTimeout(closeRoomModal, 650);
         });
       } else if (node.kind === 'acts') {
         roomSubEl.textContent =
           'A stranded traveler sits with a dead flashlight. Πράξεις (Acts) 4:32: All things were κοινά (common) to believers in one καρδία (heart).';
         addChoice('Share <strong>20% battery</strong> with the traveler (unlocks +35% cache & bonus)', () => {
           if (player.battery < 20) {
-            roomFeedbackEl.textContent = 'Not enough battery to share 20% right now.';
+            roomFeedbackEl.textContent = 'Not enough battery to share 20% right now—step back or find a battery cell.';
             return;
           }
           node.solved = true;
@@ -1772,30 +1751,32 @@
           awardBadge('generous');
           audio.playSoftOvertChime();
           roomFeedbackEl.textContent = 'Shared 20% and received a +35% battery cache + κοινά card!';
-          setTimeout(closeRoomModal, 850);
+          setTimeout(closeRoomModal, 700);
         });
         addChoice('Walk past without sharing', () => {
           node.solved = true;
           audio.playPickupClick();
           roomFeedbackEl.textContent = 'You walked past; the route continues.';
-          setTimeout(closeRoomModal, 700);
+          setTimeout(closeRoomModal, 550);
         });
       } else if (node.kind === 'toll') {
         roomSubEl.textContent =
           'A shiny gate demands 50% battery for a "fast exit." A plain stone wall beside it offers a free, honest route.';
         addChoice('<strong>Pay 50% Battery</strong> for the shiny "Fast Exit"', () => {
+          node.solved = true;
           player.paidToll = true;
           player.covertFollowed += 1;
           player.battery = Math.max(0, player.battery - 50);
           audio.playCovertAlert();
-          roomFeedbackEl.textContent = 'Toll paid—it was a greedy dead-end snare (−50% battery)!';
+          roomFeedbackEl.textContent = 'Toll paid—it was a greedy dead-end snare (−50% battery).';
+          setTimeout(closeRoomModal, 700);
         });
         addChoice('<strong>Take the Free Plain Path</strong> (refuse the toll)', () => {
           node.solved = true;
           if (!player.paidToll) awardBadge('unbought');
           audio.playSoftOvertChime();
           roomFeedbackEl.textContent = 'Free path taken! Unbought discernment honored.';
-          setTimeout(closeRoomModal, 750);
+          setTimeout(closeRoomModal, 650);
         });
       } else if (node.kind === 'pantry') {
         roomSubEl.textContent =
@@ -1806,14 +1787,14 @@
           player.energyCrashAt = performance.now() + 45000;
           audio.playPickupClick();
           roomFeedbackEl.textContent = '+30% spike now—watch out for the crash in 45s!';
-          setTimeout(closeRoomModal, 800);
+          setTimeout(closeRoomModal, 650);
         });
         addChoice('Eat <strong>Plain Real Food</strong> (steady +15% battery with no crash)', () => {
           node.solved = true;
           player.battery = Math.min(100, player.battery + 15);
           audio.playSoftOvertChime();
           roomFeedbackEl.textContent = 'Steady +15% battery from real food.';
-          setTimeout(closeRoomModal, 750);
+          setTimeout(closeRoomModal, 650);
         });
       } else if (node.kind === 'absurdity') {
         roomSubEl.textContent =
@@ -1827,7 +1808,7 @@
             }
           }
           roomFeedbackEl.textContent = 'Laughter broke the tension and scattered nearby spiders!';
-          setTimeout(closeRoomModal, 800);
+          setTimeout(closeRoomModal, 650);
         });
       } else if (node.kind === 'gallery') {
         roomSubEl.textContent =
@@ -1840,7 +1821,7 @@
               player.battery = Math.min(100, player.battery + 10);
               audio.playLetterChime();
               roomFeedbackEl.textContent = `${fName} exposed the hidden mark in #SpirituallySmartArt (+10% battery)!`;
-              setTimeout(closeRoomModal, 850);
+              setTimeout(closeRoomModal, 700);
             } else {
               audio.playPickupClick();
               roomFeedbackEl.textContent = `${fName} view—try another filter like Red Rainbow or Edge Glow.`;
@@ -1861,7 +1842,6 @@
 
     document.getElementById('room-close-btn').addEventListener('click', closeRoomModal);
 
-    // ΑΛΗΘΕΙΑ Keypad Modal
     const keypadModalEl = document.getElementById('keypad-modal');
     const keypadDisplayEl = document.getElementById('keypad-display');
     const keypadMsgEl = document.getElementById('keypad-msg');
@@ -2040,6 +2020,7 @@
       player.yaw = 0;
       player.hasFlashlight = false;
       player.flashlightOn = false;
+      player.emergencySparkUsed = false;
       player.leverPulled = false;
       player.basementLeverPulled = false;
       player.floorBroken = false;
@@ -2059,6 +2040,7 @@
       player.startTime = performance.now();
       player.escapeSeconds = 0;
       keypadCooldownUntil = 0;
+      lastTriggeredRoomId = null;
 
       MAZE[SECRET_GATE_CELL.r][SECRET_GATE_CELL.c] = 3;
       secretGateMesh.visible = true;
@@ -2119,6 +2101,7 @@
       player.floor = 2;
       player.x = FALL_FLOOR_CELL.c * CELL;
       player.z = FALL_FLOOR_CELL.r * CELL;
+      lastTriggeredRoomId = null;
       audio.playFallDropSound();
       showBanner(
         '<strong>Floor Gave Way!</strong> You fell into the haunted basement—watch for coffins, ditches, shovels &amp; the wall-phasing ghost. Grab the final <strong>Α</strong> (r17, c13), pull the basement lever (<strong>L</strong>) at (r5, c13), and climb the stairs at (r1, c13).',
@@ -2130,6 +2113,7 @@
       player.floor = 1;
       player.x = STAIRS_RETURN_CELL.c * CELL;
       player.z = STAIRS_RETURN_CELL.r * CELL;
+      lastTriggeredRoomId = null;
       audio.playSoftOvertChime();
       showBanner('<strong>Climbed the Stairs!</strong> Back on Floor 1.', 3400);
     }
@@ -2201,6 +2185,13 @@
 
     const keys = {};
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape' && player.modalOpen) {
+        e.preventDefault();
+        if (roomModalEl.style.display === 'flex') closeRoomModal();
+        if (keypadModalEl.style.display === 'flex') closeKeypad();
+        return;
+      }
+
       keys[e.code] = true;
       if (player.modalOpen) return;
 
@@ -2215,6 +2206,14 @@
         showBanner('😂 You laughed! Nearby spiders scatter in the dark.', 2600);
       }
       if (e.code === 'KeyF' && player.hasFlashlight && !player.won) {
+        if (player.battery <= 0 && !player.emergencySparkUsed) {
+          player.emergencySparkUsed = true;
+          player.battery = 10;
+          player.flashlightOn = true;
+          audio.playPickupClick();
+          showBanner('Emergency capacitor spark gave +10% flashlight charge—find a battery cell!', 3600);
+          return;
+        }
         if (player.battery <= 0) {
           player.flashlightOn = false;
           showBanner('Flashlight battery is at 0%—find a battery cell!', 3000);
@@ -2267,7 +2266,6 @@
       const s = mini.width / activeGrid.length;
       mctx.clearRect(0, 0, mini.width, mini.height);
 
-      // Suppression Corridor blurs minimap if reach is low
       mini.style.filter = player.reach < 45 ? 'blur(2.2px)' : 'none';
 
       if (nearDanger) {
@@ -2388,7 +2386,6 @@
 
     let last = performance.now();
     let leverPromptTime = 0;
-    let roomCooldownUntil = 0;
 
     function animate(now) {
       requestAnimationFrame(animate);
@@ -2411,7 +2408,6 @@
         rv.light.intensity = rv.node.solved ? 0 : 2.2;
       }
 
-      // Ghost moves through walls in Floor 2 basement
       const ghostTargetX = (9.5 + Math.cos(t * 0.45) * 6.5) * CELL;
       const ghostTargetZ = (9.5 + Math.sin(t * 0.37) * 6.5) * CELL;
       const gdx = ghostTargetX - ghostGroup.position.x;
@@ -2502,7 +2498,6 @@
       }
 
       if (!player.won && !player.modalOpen) {
-        // Energy Blast crash check from Health Pantry
         if (player.energyCrashAt > 0 && now >= player.energyCrashAt) {
           player.energyCrashAt = 0;
           player.battery = Math.max(0, player.battery - 40);
@@ -2510,7 +2505,6 @@
           showBanner('<strong>Energy Crash!</strong> The "Energy Blast" can wore off (−40% battery).', 4200);
         }
 
-        // Suppression Corridor reach drop
         const curR = Math.round(player.z / CELL);
         const curC = Math.round(player.x / CELL);
         const inSuppression = player.floor === 1 && SUPPRESSION_CORRIDOR_CELLS.some((sc) => sc.r === curR && sc.c === curC);
@@ -2584,7 +2578,7 @@
             player.battery = Math.max(0, player.battery - 1);
             if (player.battery === 0) {
               player.flashlightOn = false;
-              showBanner('Battery at 0%! Darkness closes in—find a battery cell.', 4200);
+              showBanner('Battery at 0%! Press <strong>F</strong> for an emergency spark or find a battery cell.', 4200);
             }
           }
         }
@@ -2623,11 +2617,16 @@
           }
         }
 
-        // Room Node trigger
-        if (now > roomCooldownUntil) {
-          for (const rn of ROOM_NODES) {
-            if (!rn.solved && rn.floor === player.floor && Math.hypot(player.x - rn.c * CELL, player.z - rn.r * CELL) < 1.45) {
-              roomCooldownUntil = now + 2000;
+        if (lastTriggeredRoomId) {
+          const activeLast = ROOM_NODES.find((n) => n.id === lastTriggeredRoomId);
+          if (!activeLast || activeLast.floor !== player.floor || Math.hypot(player.x - activeLast.c * CELL, player.z - activeLast.r * CELL) > 2.4) {
+            lastTriggeredRoomId = null;
+          }
+        }
+
+        for (const rn of ROOM_NODES) {
+          if (!rn.solved && rn.floor === player.floor && lastTriggeredRoomId !== rn.id) {
+            if (Math.hypot(player.x - rn.c * CELL, player.z - rn.r * CELL) < 1.35) {
               openRoomModal(rn);
               break;
             }
