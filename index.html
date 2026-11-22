@@ -11,7 +11,7 @@
       position: fixed; top: 14px; left: 14px; z-index: 10;
       background: rgba(6, 8, 12, 0.88); border: 1px solid rgba(255,255,255,0.18);
       padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.45;
-      max-width: 590px;
+      max-width: 610px;
     }
     #hud .stats-row {
       display: flex; flex-wrap: wrap; gap: 11px; margin-top: 6px;
@@ -136,7 +136,7 @@
 </head>
 <body>
   <div id="hud">
-    <div><strong>Controls:</strong> WASD/Arrows Walk • Mouse/Q/E Look • <strong>E/L</strong> Interact/Lever • <strong>F</strong> Flashlight • <strong>H</strong> Laugh • <strong>M</strong> Mute • <strong>Esc</strong> Close Prompt</div>
+    <div><strong>Controls:</strong> WASD/Arrows Walk • Mouse (Up/Down/Left/Right) or Q/E Turn • <strong>E/L</strong> Interact/Lever • <strong>F</strong> Flashlight • <strong>H</strong> Laugh • <strong>M</strong> Mute • <strong>Esc</strong> Close Prompt</div>
     <div class="stats-row">
       <div>Floor: <span id="floor-val">1 (Upper)</span></div>
       <div>Level: <span id="level-val">1: Awareness</span></div>
@@ -718,6 +718,7 @@
 
     const audio = new DungeonAudio();
 
+    // 0 = open path, 1 = solid stone wall, 2 = sanctuary exit, 3 = secret gate, 4 = basement stairs, 5 = broken-down rubble wall
     const MAZE = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
@@ -760,6 +761,30 @@
       [1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1],
       [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    // Crumbled / broken-down interior stone walls (passable low rubble mounds)
+    const BROKEN_WALL_CELLS = [
+      { r: 2, c: 2, floor: 1 },
+      { r: 6, c: 6, floor: 1 },
+      { r: 10, c: 10, floor: 1 },
+      { r: 4, c: 12, floor: 2 },
+      { r: 12, c: 8, floor: 2 }
+    ];
+
+    for (const bw of BROKEN_WALL_CELLS) {
+      const grid = bw.floor === 2 ? BASEMENT_MAZE : MAZE;
+      if (grid[bw.r]?.[bw.c] === 1) grid[bw.r][bw.c] = 5;
+    }
+
+    const LEAK_SPOTS = [
+      { r: 1, c: 2, floor: 1 },
+      { r: 5, c: 5, floor: 1 },
+      { r: 9, c: 7, floor: 1 },
+      { r: 13, c: 9, floor: 1 },
+      { r: 3, c: 7, floor: 2 },
+      { r: 7, c: 11, floor: 2 },
+      { r: 15, c: 11, floor: 2 }
     ];
 
     const CELL = 4;
@@ -873,6 +898,7 @@
     scene.fog = new THREE.FogExp2(0x000000, 0.085);
 
     const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 140);
+    camera.rotation.order = 'YXZ';
     scene.add(camera);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -894,27 +920,111 @@
     camera.add(flashlightTarget);
     flashlight.target = flashlightTarget;
 
-    function makeDungeonStoneTexture() {
+    function makeDungeonStoneTexture(tint = 'upper') {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#181b20';
+      ctx.fillStyle = tint === 'basement' ? '#121317' : '#181b20';
       ctx.fillRect(0, 0, 256, 256);
 
       for (let y = 0; y < 256; y += 32) {
         const offset = (y / 32) % 2 === 0 ? 0 : 32;
         for (let x = -32; x < 256; x += 64) {
-          const shade = 36 + Math.floor(Math.random() * 24);
-          ctx.fillStyle = `rgb(${shade}, ${shade + 2}, ${shade + 6})`;
+          const base = tint === 'basement' ? 30 : 38;
+          const shade = base + Math.floor(Math.random() * 24);
+          ctx.fillStyle = `rgb(${shade}, ${shade + 2}, ${shade + 5})`;
           ctx.fillRect(x + offset + 3, y + 3, 58, 26);
         }
       }
-      for (let i = 0; i < 450; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? 'rgba(20, 45, 25, 0.22)' : 'rgba(0, 0, 0, 0.25)';
+
+      // Cracks & fracture lines across stone blocks
+      ctx.strokeStyle = 'rgba(4, 5, 8, 0.85)';
+      for (let k = 0; k < 14; k++) {
+        let cx = Math.random() * 256;
+        let cy = Math.random() * 256;
+        ctx.lineWidth = 1.2 + Math.random() * 1.4;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        const steps = 4 + Math.floor(Math.random() * 5);
+        for (let s = 0; s < steps; s++) {
+          cx += (Math.random() - 0.5) * 22;
+          cy += (Math.random() - 0.5) * 22;
+          ctx.lineTo(cx, cy);
+        }
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < 480; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? 'rgba(20, 45, 25, 0.22)' : 'rgba(0, 0, 0, 0.28)';
         ctx.fillRect(Math.random() * 256, Math.random() * 256, 4, 4);
       }
       const tex = new THREE.CanvasTexture(c);
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
+    function makeFloorSlabTexture(repeatCount, baseHex, stainColor) {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = baseHex;
+      ctx.fillRect(0, 0, 256, 256);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.lineWidth = 2;
+      for (let i = 0; i <= 256; i += 64) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
+      }
+
+      for (let i = 0; i < 24; i++) {
+        const px = Math.random() * 256;
+        const py = Math.random() * 256;
+        const rad = 10 + Math.random() * 28;
+        const g = ctx.createRadialGradient(px, py, 2, px, py, rad);
+        g.addColorStop(0, stainColor);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(repeatCount, repeatCount);
+      return tex;
+    }
+
+    function makeCeilingSlabTexture(repeatCount) {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0c0e13';
+      ctx.fillRect(0, 0, 256, 256);
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i <= 256; i += 64) {
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
+      }
+
+      // Damp ceiling water stains & fissures
+      for (let i = 0; i < 16; i++) {
+        const sx = Math.random() * 256;
+        const sy = Math.random() * 256;
+        const rad = 14 + Math.random() * 26;
+        const g = ctx.createRadialGradient(sx, sy, 2, sx, sy, rad);
+        g.addColorStop(0, 'rgba(30, 58, 95, 0.35)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(sx, sy, rad, 0, Math.PI * 2); ctx.fill();
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(repeatCount, repeatCount);
       return tex;
     }
 
@@ -1120,18 +1230,21 @@
       return tex;
     }
 
-    const wallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture(), roughness: 0.9 });
-    const basementWallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture(), color: 0x6b7280, roughness: 0.95 });
-    const gateWallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture(), emissive: new THREE.Color(0x1d4ed8), emissiveIntensity: 0.35, roughness: 0.75 });
+    const mapSize = MAZE.length * CELL;
+    const floorRepeat = MAZE.length * 2;
+
+    const wallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture('upper'), roughness: 0.9 });
+    const basementWallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture('basement'), color: 0x7c8594, roughness: 0.95 });
+    const rubbleMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture('upper'), color: 0x525866, roughness: 0.96 });
+    const gateWallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture('upper'), emissive: new THREE.Color(0x1d4ed8), emissiveIntensity: 0.35, roughness: 0.75 });
     const sanctuaryWallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.45 });
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.95 });
-    const basementFloorMat = new THREE.MeshStandardMaterial({ color: 0x090a0d, roughness: 0.98 });
-    const ceilMat = new THREE.MeshStandardMaterial({ color: 0x090b0e, roughness: 0.98 });
+    const floorMat = new THREE.MeshStandardMaterial({ map: makeFloorSlabTexture(floorRepeat, '#14171f', 'rgba(15, 23, 42, 0.45)'), roughness: 0.9 });
+    const basementFloorMat = new THREE.MeshStandardMaterial({ map: makeFloorSlabTexture(floorRepeat, '#0b0d12', 'rgba(20, 40, 60, 0.45)'), roughness: 0.92 });
+    const ceilMat = new THREE.MeshStandardMaterial({ map: makeCeilingSlabTexture(floorRepeat), roughness: 0.96 });
     const webMat = new THREE.MeshStandardMaterial({ map: makeCobwebTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.8 });
     const barrierWebMat = new THREE.MeshBasicMaterial({ map: makeBarrierWebTexture(), transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
 
-    const mapSize = MAZE.length * CELL;
     const planeGeo = new THREE.PlaneGeometry(mapSize, mapSize);
 
     const floor = new THREE.Mesh(planeGeo, floorMat);
@@ -1153,6 +1266,76 @@
     basementCeiling.rotation.x = Math.PI / 2;
     basementCeiling.position.set(mapSize / 2 - CELL / 2, BASEMENT_Y + WALL_H, mapSize / 2 - CELL / 2);
     scene.add(basementCeiling);
+
+    // Leaky ceiling spots with animated water drops and floor puddles
+    const leakDrops = [];
+    const dropMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.85 });
+    const puddleMat = new THREE.MeshBasicMaterial({ color: 0x1d4ed8, transparent: true, opacity: 0.32, depthWrite: false });
+    const patchMat = new THREE.MeshBasicMaterial({ color: 0x05070a, transparent: true, opacity: 0.55, depthWrite: false });
+
+    for (let i = 0; i < LEAK_SPOTS.length; i++) {
+      const sp = LEAK_SPOTS[i];
+      const baseY = sp.floor === 2 ? BASEMENT_Y : 0;
+      const lx = sp.c * CELL + ((i % 2 === 0) ? 0.55 : -0.55);
+      const lz = sp.r * CELL + ((i % 3 === 0) ? 0.45 : -0.45);
+
+      const ceilStain = new THREE.Mesh(new THREE.CircleGeometry(0.45, 14), patchMat);
+      ceilStain.rotation.x = Math.PI / 2;
+      ceilStain.position.set(lx, baseY + WALL_H - 0.015, lz);
+      scene.add(ceilStain);
+
+      const puddle = new THREE.Mesh(new THREE.CircleGeometry(0.68, 16), puddleMat);
+      puddle.rotation.x = -Math.PI / 2;
+      puddle.position.set(lx, baseY + 0.012, lz);
+      scene.add(puddle);
+
+      const dropMesh = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), dropMat);
+      dropMesh.scale.set(0.8, 1.6, 0.8);
+      dropMesh.position.set(lx, baseY + WALL_H - 0.1, lz);
+      scene.add(dropMesh);
+
+      leakDrops.push({
+        mesh: dropMesh,
+        x: lx,
+        z: lz,
+        topY: baseY + WALL_H - 0.08,
+        botY: baseY + 0.04,
+        phase: i * 0.73,
+        speed: 1.55 + (i % 3) * 0.25
+      });
+    }
+
+    // Broken-down / crumbled wall structures
+    for (const bw of BROKEN_WALL_CELLS) {
+      const baseY = bw.floor === 2 ? BASEMENT_Y : 0;
+      const bx = bw.c * CELL;
+      const bz = bw.r * CELL;
+      const rubbleGroup = new THREE.Group();
+
+      const stump = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.92, WALL_H * 0.24, CELL * 0.92), rubbleMat);
+      stump.position.y = WALL_H * 0.12;
+      rubbleGroup.add(stump);
+
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.75, WALL_H * 0.62, 0.75), rubbleMat);
+      pillar.position.set(-0.95, WALL_H * 0.31, -0.75);
+      pillar.rotation.z = 0.08;
+      rubbleGroup.add(pillar);
+
+      for (let k = 0; k < 9; k++) {
+        const chunk = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.24 + (k % 3) * 0.11, 0),
+          rubbleMat
+        );
+        const ang = (k / 9) * Math.PI * 2;
+        const rad = 0.55 + (k % 4) * 0.35;
+        chunk.position.set(Math.cos(ang) * rad, 0.18 + (k % 2) * 0.14, Math.sin(ang) * rad);
+        chunk.rotation.set(k * 0.5, k * 0.8, k * 0.3);
+        rubbleGroup.add(chunk);
+      }
+
+      rubbleGroup.position.set(bx, baseY, bz);
+      scene.add(rubbleGroup);
+    }
 
     const fallTileMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(CELL * 0.75, CELL * 0.75),
@@ -1523,6 +1706,7 @@
       level: 1,
       seedStr: '',
       yaw: 0,
+      pitch: 0,
       hasFlashlight: false,
       flashlightOn: false,
       emergencySparkUsed: false,
@@ -2033,6 +2217,7 @@
       player.z = 1 * CELL;
       player.floor = 1;
       player.yaw = 0;
+      player.pitch = 0;
       player.hasFlashlight = false;
       player.flashlightOn = false;
       player.emergencySparkUsed = false;
@@ -2271,6 +2456,7 @@
     window.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement === renderer.domElement && !player.modalOpen) {
         player.yaw -= e.movementX * 0.0024;
+        player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * 0.0022, -1.25, 1.25);
       }
     });
 
@@ -2302,6 +2488,8 @@
             mctx.fillStyle = '#3b82f6';
           } else if (tile === 4) {
             mctx.fillStyle = player.basementLeverPulled ? '#22c55e' : '#ef4444';
+          } else if (tile === 5) {
+            mctx.fillStyle = '#78716c';
           } else {
             mctx.fillStyle = tile === 1 ? '#334155' : tile === 2 ? '#22c55e' : '#090b10';
           }
@@ -2407,6 +2595,12 @@
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
       const t = now * 0.001;
+
+      for (const ld of leakDrops) {
+        const span = ld.topY - ld.botY;
+        const cycle = (t * ld.speed + ld.phase) % 1;
+        ld.mesh.position.y = ld.topY - cycle * span;
+      }
 
       if (exitSign) {
         exitSign.lookAt(camera.position.x, exitSign.position.y, camera.position.z);
@@ -2576,6 +2770,7 @@
         const floorBaseY = player.floor === 2 ? BASEMENT_Y : 0;
         camera.position.set(player.x, floorBaseY + 1.65, player.z);
         camera.rotation.y = player.yaw;
+        camera.rotation.x = player.pitch;
 
         if (player.floor === 1 && !player.leverPulled) {
           const lx = SECRET_LEVER_CELL.c * CELL;
