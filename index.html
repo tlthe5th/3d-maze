@@ -451,7 +451,7 @@
     const SANCTUARY_RADIUS = 13.5;
     const FLASHLIGHT_CELL = { r: 7, c: 9 };
     const SECRET_GATE_CELL = { r: 14, c: 5 };
-    const SECRET_LEVER_CELL = { r: 13, c: 3 };
+    const SECRET_LEVER_CELL = { r: 13, c: 5 };
 
     const FAKE_SHORTCUT_WEBS = [
       { r: 5, c: 3, hint: 'Spiderweb Wall: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
@@ -498,7 +498,7 @@
       },
       {
         type: 'overt',
-        text: 'Secret lever near (r13,c3) opens the sealed pocket to the south. (+5% battery) ~ @TLTHE5TH',
+        text: 'Amber lever at (r13,c5) opens the sealed pocket to the south. (+5% battery) ~ @TLTHE5TH',
         outcome: { batteryDelta: 5, spiderSurge: false, trapNote: 'Checked overt sign (+5% battery).' }
       },
       {
@@ -943,7 +943,7 @@
     secretGateMesh.position.set(SECRET_GATE_CELL.c * CELL, WALL_H / 2, SECRET_GATE_CELL.r * CELL);
     scene.add(secretGateMesh);
 
-    // Secret Lever Model at (r: 13, c: 3)
+    // Secret Lever Model at (r: 13, c: 5) on the reachable eastern corridor
     const leverGroup = new THREE.Group();
     const leverBase = new THREE.Mesh(
       new THREE.BoxGeometry(0.36, 0.36, 0.24),
