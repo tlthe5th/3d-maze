@@ -75,7 +75,7 @@
     }
     .modal-card {
       background: #0b1120; border: 1px solid rgba(148, 163, 184, 0.35);
-      border-radius: 12px; padding: 22px 24px; max-width: 540px; width: 100%;
+      border-radius: 12px; padding: 22px 24px; max-width: 560px; width: 100%;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8);
     }
     .modal-card h2 { font-size: 1.4rem; margin-bottom: 8px; color: #f8fafc; }
@@ -86,6 +86,14 @@
       padding: 11px 14px; border-radius: 8px; font-size: 13.5px; line-height: 1.4; color: #f1f5f9;
     }
     .choice-btn:hover { background: #1e293b; border-color: #38bdf8; }
+    .scale-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; text-align: left;
+    }
+    .scale-btn {
+      background: #0f172a; border: 1px solid rgba(148,163,184,0.35); padding: 9px 11px;
+      border-radius: 8px; font-size: 12.5px; line-height: 1.3; color: #e2e8f0; text-align: left;
+    }
+    .scale-btn:hover { background: #1e293b; border-color: #fbbf24; }
     .modal-feedback { min-height: 22px; margin-top: 8px; font-size: 13px; color: #fde68a; font-weight: 500; }
 
     #keypad-display {
@@ -198,7 +206,7 @@
     <h1 id="overlay-title">Operation Φῶς (Light) • OvertPsyops.AI</h1>
     <div id="best-record">Your best: None yet</div>
     <p id="overlay-text">
-      Every chapter of <strong>#OvertPsyops</strong> becomes a chamber in this two-floor labyrinth. Run the <strong>#ZeroTrustFramework</strong> test (1 John 4:1 &amp; Acts 17:11), test lamps in the Moth Chamber, restore choked reach with the Nobodies, check honesty in the Conscience Mirror, solve λόγος logic terminals, discern parables, share in Acts, bypass greed &amp; energy crashes, and unlock the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary.
+      Every chapter of <strong>#OvertPsyops</strong> becomes a chamber in this two-floor labyrinth. Run the 4-part <strong>#ZeroTrustFramework</strong> test (including the "Live Stream" trap &amp; confidence scale), inspect omitted details in the <strong>Negative Space Room</strong>, test lamps in the Moth Chamber, restore choked reach with the Nobodies, check honesty in the Conscience Mirror, solve Λόγος (Word/Logic/Reason) terminals, and unlock the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary.
     </p>
 
     <div class="setup-bar">
@@ -232,16 +240,16 @@
 
     <div id="sanctuary-links">
       <div class="verse">
+        <strong>1 Θεσσαλονικεῖς (1 Thessalonians) 5:21:</strong> Test all things; hold fast the καλός (good).
+        <span class="greek-line">πάντα δὲ δοκιμάζετε, τὸ καλὸν κατέχετε.</span>
+      </div>
+      <div class="verse">
         <strong>1 Ἰωάννου (1 John) 4:1:</strong> Beloved, do not πιστεύω (believe) every πνεῦμα (spirit), but δοκιμάζω (test) the spirits, whether they are of Θεός (God), because many ψευδοπροφῆται (false prophets) have gone out into the κόσμος (world).
         <span class="greek-line">Ἀγαπητοί, μὴ παντὶ πνεύματι πιστεύετε, ἀλλὰ δοκιμάζετε τὰ πνεύματα εἰ ἐκ τοῦ θεοῦ ἐστιν.</span>
       </div>
       <div class="verse">
         <strong>Πράξεις (Acts) 17:11:</strong> These were more εὐγενής (noble-minded) than those in Θεσσαλονίκη (Thessalonica), who received the λόγος (word) with all eagerness, daily ἀνακρίνω (examining) the γραφαί (scriptures) whether these things were so.
         <span class="greek-line">τὸ καθ᾽ ἡμέραν ἀνακρίνοντες τὰς γραφὰς εἰ ἔχοι ταῦτα οὕτως.</span>
-      </div>
-      <div class="verse">
-        <strong>Πράξεις (Acts) 4:32:</strong> The πλῆθος (multitude) of those who believed was of one καρδία (heart) and ψυχή (soul), and not one said anything of what they possessed was their own, but all things were κοινά (common) to them.
-        <span class="greek-line">Τοῦ δὲ πλήθους τῶν πιστευσάντων ἦν ἡ καρδία καὶ ἡ ψυχὴ μία· ἀλλ᾽ ἦν αὐτοῖς ἅπαντα κοινά.</span>
       </div>
       <div class="btn-row">
         <a class="action-link" href="https://spirituallysmart.com/overtpsyopsai.html" target="_blank" rel="noopener">OvertPsyops.AI</a>
@@ -283,36 +291,45 @@
     ];
 
     const STORAGE_BEST = 'overtpsyops_maze_best_v2';
-    const STORAGE_CARDS = 'overtpsyops_word_cards_v1';
+    const STORAGE_CARDS = 'overtpsyops_word_cards_v2';
     const STORAGE_BADGES = 'overtpsyops_badges_v2';
     const BASEMENT_Y = -12;
+
+    const CONFIDENCE_SCALE = [
+      { key: 'directly_verified', label: '1. Directly Verified' },
+      { key: 'structurally_likely', label: '2. Structurally Likely' },
+      { key: 'possible', label: '3. Possible' },
+      { key: 'unverified', label: '4. Unverified' },
+      { key: 'false_frame', label: '5. False Frame' },
+      { key: 'perception_management', label: '6. Perception Management' }
+    ];
 
     const GREEK_WORD_CARDS = [
       { key: 'aletheia', word: 'ἀλήθεια (truth)', note: 'Unconcealed reality that sets people free (John 8:32).' },
       { key: 'phos', word: 'φῶς (light)', note: 'Exposes hidden works and guides steps in the dark.' },
-      { key: 'logos', word: 'λόγος (logic)', note: 'Ordered reason and true speech aligned with reality.' },
+      { key: 'logos', word: 'Λόγος (Word/Logic/Reason)', note: 'Beginning & order of John 1:1; makes one ἰσχυρός (strong) to νικάω (overcome) the πονηρός (1 John 2:14).' },
       { key: 'pistis', word: 'πίστις (faith)', note: 'Steadfast trust grounded in verifiable truth.' },
       { key: 'syneidesis', word: 'συνείδησις (conscience)', note: 'Inner witness that tests motives and honesty.' },
       { key: 'koinonia', word: 'κοινωνία / κοινά (shared)', note: 'Open sharing and mutual care over extraction (Acts 4:32).' }
     ];
 
     const BADGE_DEFS = [
-      { key: 'zerotrust', name: 'Zero Trust', desc: 'Passed the #ZeroTrustFramework audit (Closed-Loop & Sincere ≠ Truthful)' },
+      { key: 'zerotrust', name: 'Zero Trust', desc: 'Passed the 4-check #ZeroTrustFramework audit & confidence scale' },
       { key: 'lightbearer', name: 'Lightbearer', desc: 'Rescued all 3 Nobodies lantern-bearers' },
       { key: 'generous', name: 'Generous', desc: 'Shared 20% battery in the Acts Sharing Room' },
       { key: 'unbought', name: 'Unbought', desc: 'Refused the greedy toll & took the true free path' },
-      { key: 'clearmind', name: 'Clear Mind', desc: 'Solved the λόγος Logic Terminal with 0 errors' }
+      { key: 'clearmind', name: 'Clear Mind', desc: 'Solved the Λόγος (Word/Logic/Reason) Terminal with 0 errors' }
     ];
 
     const ZERO_TRUST_STAGES = [
       {
-        label: 'Check 1 of 3 — The Closed-Loop Rule',
+        label: 'Check 1 of 4 — The Closed-Loop Rule',
         prompt: 'A black-box feed suppresses a post, and the SAME platform’s internal "Safety Board" stamps it "No Suppression Found." Under #ZeroTrustFramework, why is that not verification?',
         options: [
           {
             text: 'Verification controlled by the same system being checked is a closed loop—grading its own homework.',
             valid: true,
-            okMsg: 'Pass 1/3: Closed-loop self-grading spotted. Zero trust requires independent, multi-source inspection.'
+            okMsg: 'Pass 1/4: Closed-loop self-grading spotted. Zero trust requires independent, multi-source inspection.'
           },
           {
             text: 'If an official board writes the stamp, no independent check is needed.',
@@ -327,13 +344,13 @@
         ]
       },
       {
-        label: 'Check 2 of 3 — Sincere ≠ Truthful',
+        label: 'Check 2 of 4 — Sincere ≠ Truthful',
         prompt: 'An honest, well-meaning engineer repeats a pre-filtered narrative believing every word. How does #OvertPsyops treat sincerity?',
         options: [
           {
             text: 'Sincerity does not equal truth—compartmentalization can make honest people carry false frames. Check the frame and record.',
             valid: true,
-            okMsg: 'Pass 2/3: Sincere ≠ Truthful. You checked the frame rather than assuming good intentions equal accuracy.'
+            okMsg: 'Pass 2/4: Sincere ≠ Truthful. You checked the frame rather than assuming good intentions equal accuracy.'
           },
           {
             text: 'If someone sounds sincere, their claim is automatically true.',
@@ -343,20 +360,28 @@
         ]
       },
       {
-        label: 'Check 3 of 3 — Berean Standard (Acts 17:11 & 1 John 4:1)',
-        prompt: 'The Bereans daily examined the γραφαί (scriptures) even when Παῦλος (Paul) spoke, and 1 John 4:1 commands us to test the spirits. Which practice matches #ZeroTrustFramework?',
+        label: 'Check 3 of 4 — The "Live Stream" Trap',
+        prompt: 'A flawless, high-definition livestream clip appears with zero visual glitches or artifacts. Does "live" prove the broadcast is unedited and real?',
         options: [
           {
-            text: 'Zero blind trust in man-made systems; full πίστις (faith) in Θεός (God) through Χριστός Ἰησοῦς, testing claims against open records, λόγος (logic), and scripture.',
+            text: 'No—smooth video without artifacts proves nothing by itself. Demand provenance, multiple witnesses, and the unedited original.',
             valid: true,
-            okMsg: 'Pass 3/3: #ZeroTrustFramework audit complete! λόγος card & ★ Zero Trust badge unlocked.'
+            okMsg: 'Pass 3/4: "Live" is not proof. Real-time speech/video rewriting means provenance and independent witnesses are required.'
           },
           {
-            text: 'Trust whichever institution, influencer, or AI speaks loudest without checking sources.',
+            text: 'Yes—if there are no glitch artifacts on screen, a livestream is automatically proven real.',
             valid: false,
-            failMsg: 'No human system gets a free pass—inspect the record and test every claim.'
+            failMsg: 'Live Stream Trap! Absence of visible glitches is not proof of provenance or unedited reality.'
           }
         ]
+      },
+      {
+        label: 'Check 4 of 4 — Confidence Scale & Berean Standard (1 Thess 5:21 / Acts 17:11)',
+        prompt: 'A viral clip has no primary source, omits key documents, and uses coordinated slogans across channels. Where on the #OvertPsyops Confidence Scale does it belong?',
+        options: null,
+        scalePrompt: true,
+        correctScale: 'perception_management',
+        okMsg: 'Pass 4/4: Classified as Perception Management! Λόγος (Word/Logic/Reason) card & ★ Zero Trust badge unlocked.'
       }
     ];
 
@@ -474,7 +499,7 @@
         ]
       },
       {
-        q: 'If "λόγος" means ordered reason/word and confusion opposes clarity, what restores order?',
+        q: 'If "Λόγος" means Word/Logic/Reason and confusion opposes clarity, what restores order?',
         options: [
           { text: 'Clear definitions, valid reasoning, and verifiable facts.', valid: true },
           { text: 'Random noise and contradiction.', valid: false },
@@ -933,12 +958,13 @@
 
     const ROOM_NODES = [
       { id: 'zerotrust', kind: 'zerotrust', r: 15, c: 9, floor: 1, title: '🔒 #ZeroTrustFramework Audit', color: 0x38bdf8, solved: false },
+      { id: 'negativespace', kind: 'negativespace', r: 13, c: 9, floor: 1, title: '🕳️ The Negative Space Room', color: 0xa855f7, solved: false },
       { id: 'moth', kind: 'moth', r: 3, c: 5, floor: 1, title: '🦋 The Moth Chamber', color: 0xfbbf24, solved: false },
       { id: 'nobodies_1', kind: 'nobody', r: 1, c: 3, floor: 1, title: '🏮 Nobody Lantern-Bearer #1', color: 0xfde047, solved: false },
       { id: 'nobodies_2', kind: 'nobody', r: 17, c: 3, floor: 1, title: '🏮 Nobody Lantern-Bearer #2', color: 0xfde047, solved: false },
       { id: 'nobodies_3', kind: 'nobody', r: 13, c: 15, floor: 2, title: '🏮 Nobody Lantern-Bearer #3', color: 0xfde047, solved: false },
       { id: 'mirror', kind: 'mirror', r: 9, c: 3, floor: 1, title: '🪞 The Conscience Mirror', color: 0x38bdf8, solved: false },
-      { id: 'logic', kind: 'logic', r: 5, c: 11, floor: 1, title: '🤖 The λόγος (Logic) Terminal', color: 0x60a5fa, solved: false },
+      { id: 'logic', kind: 'logic', r: 5, c: 11, floor: 1, title: '🤖 The Λόγος (Word/Logic/Reason) Terminal', color: 0x60a5fa, solved: false },
       { id: 'parable', kind: 'parable', r: 13, c: 13, floor: 1, title: '📜 The Parable Doors', color: 0xc084fc, solved: false },
       { id: 'acts', kind: 'acts', r: 15, c: 13, floor: 1, title: '🤝 The Acts Sharing Room', color: 0x34d399, solved: false },
       { id: 'toll', kind: 'toll', r: 15, c: 11, floor: 1, title: '💰 The Toll Gate of Greed', color: 0xf59e0b, solved: false },
@@ -1874,40 +1900,80 @@
     let activeRoomNode = null;
     let lastTriggeredRoomId = null;
 
-    function renderZeroTrustStage(node, stageIdx) {
-      const st = ZERO_TRUST_STAGES[stageIdx];
-      roomSubEl.innerHTML = `<strong>${st.label}</strong> — <em>Verify Everything, Hide Nothing!</em><br><br>${st.prompt}`;
-      roomChoicesEl.innerHTML = '';
-      st.options.forEach((opt) => {
+    function renderConfidenceButtons(onSelect) {
+      const grid = document.createElement('div');
+      grid.className = 'scale-grid';
+      CONFIDENCE_SCALE.forEach((sc) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'choice-btn';
-        btn.innerHTML = opt.text;
-        btn.addEventListener('click', () => {
-          if (opt.valid) {
+        btn.className = 'scale-btn';
+        btn.textContent = sc.label;
+        btn.addEventListener('click', () => onSelect(sc.key, sc.label));
+        grid.appendChild(btn);
+      });
+      roomChoicesEl.appendChild(grid);
+    }
+
+    function renderZeroTrustStage(node, stageIdx) {
+      const st = ZERO_TRUST_STAGES[stageIdx];
+      roomSubEl.innerHTML = `<strong>${st.label}</strong> — <em>Test all things; hold fast the καλός (good) (1 Thess 5:21).</em><br><br>${st.prompt}`;
+      roomChoicesEl.innerHTML = '';
+
+      if (st.scalePrompt) {
+        renderConfidenceButtons((pickedKey, pickedLabel) => {
+          if (pickedKey === st.correctScale) {
             audio.playSoftOvertChime();
-            roomFeedbackEl.textContent = opt.okMsg;
-            if (stageIdx + 1 < ZERO_TRUST_STAGES.length) {
-              setTimeout(() => {
-                roomFeedbackEl.textContent = '';
-                renderZeroTrustStage(node, stageIdx + 1);
-              }, 750);
-            } else {
-              node.solved = true;
-              player.battery = Math.min(100, player.battery + 10);
-              awardWordCard('logos');
-              awardBadge('zerotrust');
-              setTimeout(closeRoomModal, 850);
-            }
+            roomFeedbackEl.textContent = st.okMsg;
+            node.solved = true;
+            player.battery = Math.min(100, player.battery + 10);
+            awardWordCard('logos');
+            awardBadge('zerotrust');
+            setTimeout(closeRoomModal, 900);
           } else {
             player.covertFollowed += 1;
             player.battery = Math.max(0, player.battery - 10);
             audio.playCovertAlert();
-            roomFeedbackEl.textContent = `${opt.failMsg} (−10% battery)`;
+            roomFeedbackEl.textContent = `"${pickedLabel}" misses the mark—unlinked source + omitted record + coordinated push is Perception Management. (−10% battery)`;
           }
         });
-        roomChoicesEl.appendChild(btn);
+      } else {
+        st.options.forEach((opt) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'choice-btn';
+          btn.innerHTML = opt.text;
+          btn.addEventListener('click', () => {
+            if (opt.valid) {
+              audio.playSoftOvertChime();
+              roomFeedbackEl.textContent = opt.okMsg;
+              if (stageIdx + 1 < ZERO_TRUST_STAGES.length) {
+                setTimeout(() => {
+                  roomFeedbackEl.textContent = '';
+                  renderZeroTrustStage(node, stageIdx + 1);
+                }, 750);
+              }
+            } else {
+              player.covertFollowed += 1;
+              player.battery = Math.max(0, player.battery - 10);
+              audio.playCovertAlert();
+              roomFeedbackEl.textContent = `${opt.failMsg} (−10% battery)`;
+            }
+          });
+          roomChoicesEl.appendChild(btn);
+        });
+      }
+
+      const eggBtn = document.createElement('button');
+      eggBtn.type = 'button';
+      eggBtn.className = 'choice-btn';
+      eggBtn.style.borderColor = 'rgba(251, 191, 36, 0.55)';
+      eggBtn.style.background = '#171324';
+      eggBtn.innerHTML = '🕵️ <strong>Easter Egg — "Test This Game Too":</strong> Inspect OvertPsyops.AI itself against γραφή (scripture) &amp; Λόγος (Word/Logic/Reason)';
+      eggBtn.addEventListener('click', () => {
+        audio.playSoftOvertChime();
+        roomFeedbackEl.textContent = 'Test This Game Too: Do not grant OvertPsyops.AI blind trust—check every claim, quote, and Greek word against γραφή (scripture) and Λόγος (Word/Logic/Reason).';
       });
+      roomChoicesEl.appendChild(eggBtn);
     }
 
     function openRoomModal(node) {
@@ -1931,6 +1997,25 @@
 
       if (node.kind === 'zerotrust') {
         renderZeroTrustStage(node, 0);
+      } else if (node.kind === 'negativespace') {
+        roomSubEl.innerHTML =
+          'A headline reads: <em>"Final Report Clears All Concerns After Private Briefing."</em><br><br>' +
+          '<strong>Negative Space Check:</strong> What is missing? The underlying audit record is described but not linked, the methodology is omitted, and the core question ("Who audited the auditors and on what raw data?") is never answered. Classify this frame:';
+        renderConfidenceButtons((pickedKey, pickedLabel) => {
+          if (pickedKey === 'perception_management' || pickedKey === 'unverified') {
+            node.solved = true;
+            player.battery = Math.min(100, player.battery + 10);
+            awardWordCard('logos');
+            audio.playSoftOvertChime();
+            roomFeedbackEl.textContent = `Negative space spotted (${pickedLabel})! Omitted records & unanswered questions exposed the frame (+10% battery).`;
+            setTimeout(closeRoomModal, 850);
+          } else {
+            player.covertFollowed += 1;
+            player.battery = Math.max(0, player.battery - 10);
+            audio.playCovertAlert();
+            roomFeedbackEl.textContent = `Choosing "${pickedLabel}" overlooks the missing audit record and unanswered question (−10% battery).`;
+          }
+        });
       } else if (node.kind === 'nobody') {
         roomSubEl.textContent =
           'A quiet nobody holds an unlit lantern in the dim. Παῦλος (Paul) wrote that Θεός (God) chose the μωρά (foolish things) of the world to shame the wise.';
@@ -1998,7 +2083,7 @@
               node.solved = true;
               awardWordCard('logos');
               audio.playSoftOvertChime();
-              roomFeedbackEl.textContent = 'λόγος (logic) verified! Terminal unlocked.';
+              roomFeedbackEl.textContent = 'Λόγος (Word/Logic/Reason) verified! Terminal unlocked.';
               setTimeout(closeRoomModal, 650);
             } else {
               player.logicErrors += 1;
@@ -2213,7 +2298,7 @@
 
       ctx.fillStyle = '#cbd5e1';
       ctx.font = 'italic 18px serif';
-      ctx.fillText('"Test everything; hold fast what is good." — #ZeroTrustFramework by #OvertPsyops', 38, 275);
+      ctx.fillText('"Test all things; hold fast the καλός (good)." (1 Thess 5:21) — #ZeroTrustFramework', 38, 275);
 
       ctx.fillStyle = '#4ade80';
       ctx.font = 'bold 22px monospace';
@@ -2619,7 +2704,7 @@
 
       for (const rn of ROOM_NODES) {
         if (!rn.solved && rn.floor === player.floor) {
-          mctx.fillStyle = rn.kind === 'zerotrust' ? '#38bdf8' : '#f472b6';
+          mctx.fillStyle = (rn.kind === 'zerotrust' || rn.kind === 'negativespace') ? '#38bdf8' : '#f472b6';
           mctx.fillRect((rn.c + 0.32) * s, (rn.r + 0.32) * s, s * 0.36, s * 0.36);
         }
       }
@@ -2890,7 +2975,7 @@
           pickupBeaconLight.intensity = 0;
           audio.playPickupClick();
           showBanner(
-            '<strong>Flashlight Found!</strong><br>Ψαλμοί (Psalms) 118:105: Your λόγος (word) is a λύχνος (lamp) to my feet and a φῶς (light) to my path. Press <strong>F</strong> to toggle.',
+            '<strong>Flashlight Found!</strong><br>Ψαλμοί (Psalms) 118:105: Your Λόγος (Word/Logic/Reason) is a λύχνος (lamp) to my feet and a φῶς (light) to my path. Press <strong>F</strong> to toggle.',
             5500
           );
         }
