@@ -154,7 +154,7 @@
     <h1 id="overlay-title">Operation Φῶς (Light)</h1>
     <div id="best-record">Your best: None yet</div>
     <p id="overlay-text">
-      You are trapped in the Covert Labyrinth across two floors. Watch for weak floor near the flashlight that drops you to the haunted basement, pull the basement lever to open the stairs back up, collect all 7 letters of <strong>ἀλήθεια (truth)</strong> (Α Λ Η Θ Ε Ι Α), and open the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary door.
+      You are trapped in the Covert Labyrinth across two floors. Watch for weak floor near the flashlight that drops you to the haunted basement (where the final <strong>Α</strong> waits!), pull the basement lever to open the stairs back up, collect all 7 letters of <strong>ἀλήθεια (truth)</strong> (Α Λ Η Θ Ε Ι Α), and open the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary door.
     </p>
     <div class="btn-row">
       <button id="start-btn">Enter the Dark</button>
@@ -505,6 +505,7 @@
       { r: 13, c: 7, hint: 'Spiderweb Wall: "Secret shortcut ahead!" — Shine your flashlight (F) to test what is real.' }
     ];
 
+    // All 7 Greek letters of ΑΛΗΘΕΙΑ (6 on Floor 1, final 'Α' in Floor 2 Basement)
     const TARGET_WORD = ['Α', 'Λ', 'Η', 'Θ', 'Ε', 'Ι', 'Α'];
     const LETTER_SLOTS = [
       { char: 'Α', r: 1, c: 7, floor: 1 },
@@ -519,6 +520,7 @@
     const BATTERY_CELLS = [
       { r: 5, c: 9, floor: 1 },
       { r: 11, c: 9, floor: 1 },
+      { r: 17, c: 16, floor: 1 }, // Near Sanctuary exit so you're never stranded at 0%
       { r: 9, c: 13, floor: 2 }
     ];
 
@@ -812,14 +814,17 @@
       return tex;
     }
 
-    // Dimmer wall art materials: lit by scene light with subtle dark tint so art stays moody/dim
+    // Balanced wall art materials: clearly visible in dim corridors with subtle emissive lift
     const loader = new THREE.TextureLoader();
     const fallbackArtTex = makeFallbackArtTexture();
     const artMaterials = ART_FILES.map((file) => {
       const mat = new THREE.MeshStandardMaterial({
         map: fallbackArtTex,
-        color: 0x8a94a6,
-        roughness: 0.85,
+        emissiveMap: fallbackArtTex,
+        emissive: new THREE.Color(0xffffff),
+        emissiveIntensity: 0.16,
+        color: 0xd0d8e8,
+        roughness: 0.75,
         metalness: 0.05
       });
       loader.load(
@@ -827,6 +832,7 @@
         (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           mat.map = tex;
+          mat.emissiveMap = tex;
           mat.needsUpdate = true;
         },
         undefined,
@@ -1448,7 +1454,7 @@
         group,
         light,
         collected: false,
-        amount: 15
+        amount: 20
       };
     });
 
@@ -1539,7 +1545,7 @@
       player.z = FALL_FLOOR_CELL.r * CELL;
       audio.playFallDropSound();
       showBanner(
-        '<strong>Floor Gave Way!</strong> You fell into the haunted basement—watch for coffins, ditches, shovels & a wall-phasing ghost. Find the basement lever (<strong>L</strong>) to open the stairs back up.',
+        '<strong>Floor Gave Way!</strong> You fell into the haunted basement—grab the final <strong>Α</strong> (r17, c13), pull the basement lever (<strong>L</strong>) at (r5, c13), and climb the stairs at (r1, c13).',
         5500
       );
     }
@@ -1924,7 +1930,6 @@
           mctx.arc((BASEMENT_LEVER_CELL.c + 0.5) * s, (BASEMENT_LEVER_CELL.r + 0.5) * s, s * 0.24, 0, Math.PI * 2);
           mctx.fill();
         }
-        // Ghost on basement minimap
         mctx.fillStyle = 'rgba(203, 213, 225, 0.85)';
         mctx.beginPath();
         mctx.arc((ghostGroup.position.x / CELL + 0.5) * s, (ghostGroup.position.z / CELL + 0.5) * s, s * 0.28, 0, Math.PI * 2);
@@ -1994,7 +1999,6 @@
         flashlightPickup.position.y = 0.95 + Math.sin(t * 3) * 0.08;
       }
 
-      // Ghost moves smoothly through walls in the basement
       const ghostTargetX = (9.5 + Math.cos(t * 0.45) * 6.5) * CELL;
       const ghostTargetZ = (9.5 + Math.sin(t * 0.37) * 6.5) * CELL;
       const gdx = ghostTargetX - ghostGroup.position.x;
@@ -2105,7 +2109,6 @@
         if (canMoveTo(player.x + dx, player.z)) player.x += dx;
         if (canMoveTo(player.x, player.z + dz)) player.z += dz;
 
-        // Check falling through weak floor near flashlight (r: 7, c: 8)
         if (player.floor === 1) {
           const fx = FALL_FLOOR_CELL.c * CELL;
           const fz = FALL_FLOOR_CELL.r * CELL;
@@ -2115,7 +2118,6 @@
             dropToBasement();
           }
         } else {
-          // Basement lever hint & stairwell back up
           if (!player.basementLeverPulled) {
             const blx = BASEMENT_LEVER_CELL.c * CELL;
             const blz = BASEMENT_LEVER_CELL.r * CELL;
@@ -2263,9 +2265,12 @@
         if (distToExit < 1.75 && now > keypadCooldownUntil) {
           keypadCooldownUntil = now + 2200;
           if (player.collectedLetters.length < 7) {
+            const missingHint = player.collectedLetters.filter((l) => l === 'Α').length < 2
+              ? 'Missing the second Α (down in Floor 2 Basement via the weak floor at r7,c8).'
+              : 'Check uncollected Greek letters on the minimap.';
             showBanner(
-              `Sanctuary Door Locked: Collect all 7 letters of <strong>ΑΛΗΘΕΙΑ</strong> first (${player.collectedLetters.length}/7 collected).`,
-              3800
+              `Sanctuary Door Locked: Collect all 7 letters of <strong>ΑΛΗΘΕΙΑ</strong> first (${player.collectedLetters.length}/7 collected). ${missingHint}`,
+              4400
             );
           } else {
             openKeypad();
