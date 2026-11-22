@@ -11,7 +11,7 @@
       position: fixed; top: 14px; left: 14px; z-index: 10;
       background: rgba(6, 8, 12, 0.87); border: 1px solid rgba(255,255,255,0.18);
       padding: 10px 14px; border-radius: 8px; font-size: 13.5px; line-height: 1.5;
-      max-width: 530px;
+      max-width: 550px;
     }
     #hud .stats-row {
       display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px;
@@ -22,7 +22,7 @@
     #letters-val { color: #67e8f9; font-weight: 600; letter-spacing: 1px; }
     #status { margin-top: 5px; color: #fbbf24; font-weight: 500; }
     #banner {
-      position: fixed; top: 112px; left: 50%; transform: translateX(-50%); z-index: 15;
+      position: fixed; top: 122px; left: 50%; transform: translateX(-50%); z-index: 15;
       display: none; background: rgba(10, 15, 28, 0.94);
       border: 1px solid rgba(250, 204, 21, 0.6); box-shadow: 0 0 24px rgba(250, 204, 21, 0.22);
       padding: 12px 20px; border-radius: 10px; max-width: 560px; text-align: center;
@@ -109,6 +109,7 @@
   <div id="hud">
     <div><strong>Controls:</strong> WASD / Arrows to walk • Mouse to look (or Q/E to turn) • <strong>L</strong>: Pull Lever • <strong>F</strong>: Flashlight • <strong>M</strong>: Mute</div>
     <div class="stats-row">
+      <div>Floor: <span id="floor-val">1 (Upper)</span></div>
       <div>Battery: <span id="battery-val">100%</span></div>
       <div>Letters: <span id="letters-val">0/7</span> <span id="collected-list"></span></div>
       <div>Time: <span id="timer-val">0.0s</span></div>
@@ -153,7 +154,7 @@
     <h1 id="overlay-title">Operation Φῶς (Light)</h1>
     <div id="best-record">Your best: None yet</div>
     <p id="overlay-text">
-      You are trapped in the Covert Labyrinth. The walls carry messages—some overt and verifiable, others covert and hidden. Find the flashlight, watch out for red-eyed spiders and spiderweb walls, pull the secret lever to open the sealed pocket, collect all 7 letters of <strong>ἀλήθεια (truth)</strong> (Α Λ Η Θ Ε Ι Α), and open the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary door.
+      You are trapped in the Covert Labyrinth across two floors. Watch for weak floor near the flashlight that drops you to the haunted basement, pull the basement lever to open the stairs back up, collect all 7 letters of <strong>ἀλήθεια (truth)</strong> (Α Λ Η Θ Ε Ι Α), and open the <strong>OvertPsyops.AI</strong> (<strong>@TLTHE5TH</strong>) Sanctuary door.
     </p>
     <div class="btn-row">
       <button id="start-btn">Enter the Dark</button>
@@ -200,6 +201,7 @@
     ];
 
     const STORAGE_KEY = 'overtpsyops_maze_best_v1';
+    const BASEMENT_Y = -12;
 
     class DungeonAudio {
       constructor() {
@@ -320,6 +322,23 @@
         });
       }
 
+      playFallDropSound() {
+        if (this.muted) return;
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(360, now);
+        osc.frequency.exponentialRampToValueAtTime(68, now + 0.45);
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      }
+
       playCovertAlert() {
         if (this.muted) return;
         this.ensureContext();
@@ -422,7 +441,7 @@
 
     const audio = new DungeonAudio();
 
-    // 19x19 Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary, 3 = Secret Lever-Opened Gate
+    // 19x19 Upper Dungeon Maze: 1 = Stone Wall, 0 = Corridor, 2 = Exit Sanctuary, 3 = Secret Lever-Opened Gate
     const MAZE = [
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
       [1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
@@ -445,13 +464,40 @@
       [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ];
 
+    // 19x19 Basement Maze (Floor 2): 1 = Wall, 0 = Corridor, 4 = Stairwell Up (opens via basement lever)
+    const BASEMENT_MAZE = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,1,0,0,0,0,0,0,4,0,0,0,0,1],
+      [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,0,1],
+      [1,0,1,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,1],
+      [1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,1,1],
+      [1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,1,1,0,1],
+      [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+      [1,0,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,0,1],
+      [1,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1],
+      [1,0,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+      [1,1,1,1,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1],
+      [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1],
+      [1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+      [1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1],
+      [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
     const CELL = 4;
     const WALL_H = 3.8;
     const PLAYER_R = 0.72;
     const SANCTUARY_RADIUS = 13.5;
     const FLASHLIGHT_CELL = { r: 7, c: 9 };
+    const FALL_FLOOR_CELL = { r: 7, c: 8 }; // Weak floor right near flashlight drops to Floor 2
     const SECRET_GATE_CELL = { r: 14, c: 5 };
     const SECRET_LEVER_CELL = { r: 13, c: 5 };
+    const BASEMENT_LEVER_CELL = { r: 5, c: 13 }; // Basement lever opens stairs back up
+    const BASEMENT_STAIRS_CELL = { r: 1, c: 13 };
+    const STAIRS_RETURN_CELL = { r: 1, c: 7 }; // Safe open corridor tile on Floor 1
 
     const FAKE_SHORTCUT_WEBS = [
       { r: 5, c: 3, hint: 'Spiderweb Wall: "Fastest path straight through!" — Shine your flashlight (F) to burn away the web.' },
@@ -459,22 +505,21 @@
       { r: 13, c: 7, hint: 'Spiderweb Wall: "Secret shortcut ahead!" — Shine your flashlight (F) to test what is real.' }
     ];
 
-    // 7 Greek letters of ΑΛΗΘΕΙΑ (note: two identical 'Α' glyphs; 'Ι' sits inside the lever-unlocked pocket at r:15, c:5)
     const TARGET_WORD = ['Α', 'Λ', 'Η', 'Θ', 'Ε', 'Ι', 'Α'];
     const LETTER_SLOTS = [
-      { char: 'Α', r: 1, c: 7 },
-      { char: 'Λ', r: 3, c: 11 },
-      { char: 'Η', r: 7, c: 5 },
-      { char: 'Θ', r: 11, c: 3 },
-      { char: 'Ε', r: 11, c: 13 },
-      { char: 'Ι', r: 15, c: 5 },
-      { char: 'Α', r: 17, c: 13 }
+      { char: 'Α', r: 1, c: 7, floor: 1 },
+      { char: 'Λ', r: 3, c: 11, floor: 1 },
+      { char: 'Η', r: 7, c: 5, floor: 1 },
+      { char: 'Θ', r: 11, c: 3, floor: 1 },
+      { char: 'Ε', r: 11, c: 13, floor: 1 },
+      { char: 'Ι', r: 15, c: 5, floor: 1 },
+      { char: 'Α', r: 17, c: 13, floor: 2 }
     ];
 
     const BATTERY_CELLS = [
-      { r: 5, c: 9 },
-      { r: 11, c: 9 },
-      { r: 15, c: 15 }
+      { r: 5, c: 9, floor: 1 },
+      { r: 11, c: 9, floor: 1 },
+      { r: 9, c: 13, floor: 2 }
     ];
 
     const PLAQUE_CANDIDATE_CELLS = [
@@ -597,7 +642,7 @@
     scene.background = pitchBlack.clone();
     scene.fog = new THREE.FogExp2(0x000000, 0.085);
 
-    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 120);
+    const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 140);
     scene.add(camera);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -767,10 +812,16 @@
       return tex;
     }
 
+    // Dimmer wall art materials: lit by scene light with subtle dark tint so art stays moody/dim
     const loader = new THREE.TextureLoader();
     const fallbackArtTex = makeFallbackArtTexture();
     const artMaterials = ART_FILES.map((file) => {
-      const mat = new THREE.MeshBasicMaterial({ map: fallbackArtTex });
+      const mat = new THREE.MeshStandardMaterial({
+        map: fallbackArtTex,
+        color: 0x8a94a6,
+        roughness: 0.85,
+        metalness: 0.05
+      });
       loader.load(
         file,
         (tex) => {
@@ -879,6 +930,11 @@
     }
 
     const wallMat = new THREE.MeshStandardMaterial({ map: makeDungeonStoneTexture(), roughness: 0.9 });
+    const basementWallMat = new THREE.MeshStandardMaterial({
+      map: makeDungeonStoneTexture(),
+      color: 0x6b7280,
+      roughness: 0.95
+    });
     const gateWallMat = new THREE.MeshStandardMaterial({
       map: makeDungeonStoneTexture(),
       emissive: new THREE.Color(0x1d4ed8),
@@ -887,6 +943,7 @@
     });
     const sanctuaryWallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.45 });
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.95 });
+    const basementFloorMat = new THREE.MeshStandardMaterial({ color: 0x090a0d, roughness: 0.98 });
     const ceilMat = new THREE.MeshStandardMaterial({ color: 0x090b0e, roughness: 0.98 });
     const webMat = new THREE.MeshStandardMaterial({
       map: makeCobwebTexture(),
@@ -906,6 +963,8 @@
 
     const mapSize = MAZE.length * CELL;
     const planeGeo = new THREE.PlaneGeometry(mapSize, mapSize);
+
+    // Floor 1 floor & ceiling
     const floor = new THREE.Mesh(planeGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(mapSize / 2 - CELL / 2, 0, mapSize / 2 - CELL / 2);
@@ -915,6 +974,31 @@
     ceiling.rotation.x = Math.PI / 2;
     ceiling.position.set(mapSize / 2 - CELL / 2, WALL_H, mapSize / 2 - CELL / 2);
     scene.add(ceiling);
+
+    // Floor 2 (Basement) floor & ceiling
+    const basementFloor = new THREE.Mesh(planeGeo, basementFloorMat);
+    basementFloor.rotation.x = -Math.PI / 2;
+    basementFloor.position.set(mapSize / 2 - CELL / 2, BASEMENT_Y, mapSize / 2 - CELL / 2);
+    scene.add(basementFloor);
+
+    const basementCeiling = new THREE.Mesh(planeGeo, ceilMat);
+    basementCeiling.rotation.x = Math.PI / 2;
+    basementCeiling.position.set(mapSize / 2 - CELL / 2, BASEMENT_Y + WALL_H, mapSize / 2 - CELL / 2);
+    scene.add(basementCeiling);
+
+    // Weak / Trap Floor Tile near Flashlight (r: 7, c: 8)
+    const fallTileMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(CELL * 0.75, CELL * 0.75),
+      new THREE.MeshStandardMaterial({
+        color: 0x3f2d20,
+        emissive: new THREE.Color(0x451a03),
+        emissiveIntensity: 0.35,
+        roughness: 0.95
+      })
+    );
+    fallTileMesh.rotation.x = -Math.PI / 2;
+    fallTileMesh.position.set(FALL_FLOOR_CELL.c * CELL, 0.02, FALL_FLOOR_CELL.r * CELL);
+    scene.add(fallTileMesh);
 
     // Pickup Flashlight Model
     const flashlightPickup = new THREE.Group();
@@ -935,7 +1019,7 @@
     pickupBeaconLight.position.set(pickupX, 1.15, pickupZ);
     scene.add(pickupBeaconLight);
 
-    // Secret Gate Mesh at (r: 14, c: 5) that opens when the lever is pulled
+    // Floor 1 Secret Gate at (r: 14, c: 5) and Lever at (r: 13, c: 5)
     const secretGateMesh = new THREE.Mesh(
       new THREE.BoxGeometry(CELL, WALL_H, CELL),
       gateWallMat
@@ -943,7 +1027,6 @@
     secretGateMesh.position.set(SECRET_GATE_CELL.c * CELL, WALL_H / 2, SECRET_GATE_CELL.r * CELL);
     scene.add(secretGateMesh);
 
-    // Secret Lever Model at (r: 13, c: 5) on the reachable eastern corridor
     const leverGroup = new THREE.Group();
     const leverBase = new THREE.Mesh(
       new THREE.BoxGeometry(0.36, 0.36, 0.24),
@@ -969,6 +1052,140 @@
     leverLight.position.set(SECRET_LEVER_CELL.c * CELL, 1.5, SECRET_LEVER_CELL.r * CELL - 1.1);
     scene.add(leverLight);
 
+    // Floor 2 Basement Lever (r: 5, c: 13) & Stairwell Gate / Steps (r: 1, c: 13)
+    const basementLeverGroup = new THREE.Group();
+    const bLeverBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.36, 0.36, 0.24),
+      new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5, roughness: 0.5 })
+    );
+    const bLeverHandleMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      emissive: new THREE.Color(0xd97706),
+      emissiveIntensity: 0.5,
+      roughness: 0.35
+    });
+    const bLeverHandle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.05, 0.72, 12),
+      bLeverHandleMat
+    );
+    bLeverHandle.position.set(0, 0.36, 0.12);
+    bLeverHandle.rotation.x = 0.45;
+    basementLeverGroup.add(bLeverBase, bLeverHandle);
+    basementLeverGroup.position.set(
+      BASEMENT_LEVER_CELL.c * CELL,
+      BASEMENT_Y + 1.25,
+      BASEMENT_LEVER_CELL.r * CELL - 1.45
+    );
+    scene.add(basementLeverGroup);
+
+    const basementLeverLight = new THREE.PointLight(0xf59e0b, 2.4, 5.0, 1.8);
+    basementLeverLight.position.set(
+      BASEMENT_LEVER_CELL.c * CELL,
+      BASEMENT_Y + 1.5,
+      BASEMENT_LEVER_CELL.r * CELL - 1.1
+    );
+    scene.add(basementLeverLight);
+
+    // Stairs & Barrier at (r: 1, c: 13)
+    const stairsGroup = new THREE.Group();
+    const stepMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+    for (let s = 0; s < 6; s++) {
+      const step = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.28, 0.55), stepMat);
+      step.position.set(0, 0.14 + s * 0.45, 1.2 - s * 0.45);
+      stairsGroup.add(step);
+    }
+    stairsGroup.position.set(BASEMENT_STAIRS_CELL.c * CELL, BASEMENT_Y, BASEMENT_STAIRS_CELL.r * CELL);
+    scene.add(stairsGroup);
+
+    const stairsBarrierMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(CELL * 0.9, WALL_H * 0.85, 0.4),
+      new THREE.MeshStandardMaterial({
+        color: 0x991b1b,
+        emissive: new THREE.Color(0x7f1d1d),
+        emissiveIntensity: 0.4,
+        roughness: 0.7
+      })
+    );
+    stairsBarrierMesh.position.set(
+      BASEMENT_STAIRS_CELL.c * CELL,
+      BASEMENT_Y + WALL_H * 0.425,
+      BASEMENT_STAIRS_CELL.r * CELL + 1.2
+    );
+    scene.add(stairsBarrierMesh);
+
+    // Spooky Basement Decorations: Coffins, Ditches, Shovels
+    const spookyGroup = new THREE.Group();
+    const coffinMat = new THREE.MeshStandardMaterial({ color: 0x291812, roughness: 0.88 });
+    const ditchMat = new THREE.MeshStandardMaterial({ color: 0x030304, roughness: 1.0 });
+    const shovelWoodMat = new THREE.MeshStandardMaterial({ color: 0x4a3219, roughness: 0.9 });
+    const shovelBladeMat = new THREE.MeshStandardMaterial({ color: 0x525866, metalness: 0.6, roughness: 0.5 });
+
+    function addCoffin(r, c, rotY = 0) {
+      const g = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.55, 2.2), coffinMat);
+      base.position.y = 0.275;
+      const lid = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.1, 2.28), coffinMat);
+      lid.position.y = 0.58;
+      g.add(base, lid);
+      g.position.set(c * CELL, BASEMENT_Y, r * CELL);
+      g.rotation.y = rotY;
+      spookyGroup.add(g);
+    }
+
+    function addDitch(r, c, rotY = 0) {
+      const ditch = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.6), ditchMat);
+      ditch.rotation.x = -Math.PI / 2;
+      ditch.rotation.y = rotY;
+      ditch.position.set(c * CELL, BASEMENT_Y + 0.015, r * CELL);
+      spookyGroup.add(ditch);
+    }
+
+    function addShovel(r, c, rotY = 0.4) {
+      const sh = new THREE.Group();
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.45, 8), shovelWoodMat);
+      shaft.position.y = 0.72;
+      shaft.rotation.z = 0.18;
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.34, 0.03), shovelBladeMat);
+      blade.position.set(0.12, 0.14, 0);
+      blade.rotation.z = 0.18;
+      sh.add(shaft, blade);
+      sh.position.set(c * CELL + 0.7, BASEMENT_Y, r * CELL - 0.5);
+      sh.rotation.y = rotY;
+      spookyGroup.add(sh);
+    }
+
+    addCoffin(3, 3, 0);
+    addCoffin(7, 15, Math.PI / 2);
+    addCoffin(15, 7, 0);
+    addDitch(5, 3, Math.PI / 2);
+    addDitch(11, 5, 0);
+    addDitch(17, 11, Math.PI / 2);
+    addShovel(3, 5, 0.5);
+    addShovel(7, 13, -0.4);
+    addShovel(15, 9, 0.9);
+    scene.add(spookyGroup);
+
+    // Wall-Phasing Ghost on Floor 2 (ignores walls and moves freely)
+    const ghostGroup = new THREE.Group();
+    const ghostMat = new THREE.MeshBasicMaterial({
+      color: 0xcbd5e1,
+      transparent: true,
+      opacity: 0.42,
+      depthWrite: false
+    });
+    const ghostHead = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 14), ghostMat);
+    ghostHead.position.y = 1.65;
+    const ghostBody = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.58, 1.25, 14), ghostMat);
+    ghostBody.position.y = 0.95;
+    const ghostEyeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const gEyeL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), ghostEyeMat);
+    gEyeL.position.set(-0.14, 1.72, 0.36);
+    const gEyeR = gEyeL.clone();
+    gEyeR.position.x = 0.14;
+    ghostGroup.add(ghostHead, ghostBody, gEyeL, gEyeR);
+    ghostGroup.position.set(9 * CELL, BASEMENT_Y + 0.1, 9 * CELL);
+    scene.add(ghostGroup);
+
     let exitPos = new THREE.Vector3();
     for (let r = 0; r < MAZE.length; r++) {
       for (let c = 0; c < MAZE[r].length; c++) {
@@ -983,7 +1200,7 @@
     let exitSign = null;
     let artIndex = 0;
 
-    function createSpider(x, y, z, baseYaw) {
+    function createSpider(x, y, z, baseYaw, floorNum = 1) {
       const group = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.4 });
       const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff1e1e });
@@ -1021,6 +1238,8 @@
       spiders.push({
         group,
         legs,
+        floor: floorNum,
+        baseY: y,
         originX: x,
         originZ: z,
         x,
@@ -1054,6 +1273,7 @@
       scene.add(holder);
     }
 
+    // Build Floor 1 walls, art, cobwebs, spiders, and sanctuary exit
     for (let r = 0; r < MAZE.length; r++) {
       for (let c = 0; c < MAZE[r].length; c++) {
         const x = c * CELL;
@@ -1080,7 +1300,7 @@
             scene.add(web);
           }
           if ((r > 2 || c > 2) && (r * 5 + c * 11) % 7 === 0) {
-            createSpider(x, 0.02, z, Math.random() * Math.PI * 2);
+            createSpider(x, 0.02, z, Math.random() * Math.PI * 2, 1);
           }
         } else if (MAZE[r][c] === 2) {
           const pad = new THREE.Mesh(
@@ -1101,6 +1321,21 @@
           const exitLight = new THREE.PointLight(0xffffff, 35, 22, 1.2);
           exitLight.position.set(x, 2.8, z);
           scene.add(exitLight);
+        }
+      }
+    }
+
+    // Build Floor 2 (Basement) walls and spiders
+    for (let r = 0; r < BASEMENT_MAZE.length; r++) {
+      for (let c = 0; c < BASEMENT_MAZE[r].length; c++) {
+        const x = c * CELL;
+        const z = r * CELL;
+        if (BASEMENT_MAZE[r][c] === 1) {
+          const bWall = new THREE.Mesh(wallGeo, basementWallMat);
+          bWall.position.set(x, BASEMENT_Y + WALL_H / 2, z);
+          scene.add(bWall);
+        } else if (BASEMENT_MAZE[r][c] === 0 && (r * 3 + c * 7) % 11 === 0) {
+          createSpider(x, BASEMENT_Y + 0.02, z, Math.random() * Math.PI * 2, 2);
         }
       }
     }
@@ -1158,21 +1393,23 @@
     const letterPickups = LETTER_SLOTS.map((slot, idx) => {
       const lx = slot.c * CELL;
       const lz = slot.r * CELL;
+      const ly = slot.floor === 2 ? BASEMENT_Y + 1.35 : 1.35;
       const mat = new THREE.MeshBasicMaterial({
         map: makeGreekLetterTexture(slot.char),
         side: THREE.DoubleSide
       });
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.15), mat);
-      mesh.position.set(lx, 1.35, lz);
+      mesh.position.set(lx, ly, lz);
       scene.add(mesh);
 
       const light = new THREE.PointLight(0x38bdf8, 2.8, 5.2, 1.8);
-      light.position.set(lx, 1.45, lz);
+      light.position.set(lx, ly + 0.1, lz);
       scene.add(light);
 
       return {
         id: `letter_${idx}`,
         char: slot.char,
+        floor: slot.floor,
         x: lx,
         z: lz,
         mesh,
@@ -1184,6 +1421,7 @@
     const batteryPickups = BATTERY_CELLS.map((cell, idx) => {
       const bx = cell.c * CELL;
       const bz = cell.r * CELL;
+      const by = cell.floor === 2 ? BASEMENT_Y + 1.05 : 1.05;
       const group = new THREE.Group();
       const body = new THREE.Mesh(
         new THREE.CylinderGeometry(0.16, 0.16, 0.42, 12),
@@ -1195,15 +1433,16 @@
       );
       cap.position.y = 0.25;
       group.add(body, cap);
-      group.position.set(bx, 1.05, bz);
+      group.position.set(bx, by, bz);
       scene.add(group);
 
       const light = new THREE.PointLight(0x34d399, 2.4, 4.8, 1.8);
-      light.position.set(bx, 1.25, bz);
+      light.position.set(bx, by + 0.2, bz);
       scene.add(light);
 
       return {
         id: `bat_${idx}`,
+        floor: cell.floor,
         x: bx,
         z: bz,
         group,
@@ -1275,10 +1514,13 @@
     const player = {
       x: 1 * CELL,
       z: 1 * CELL,
+      floor: 1,
       yaw: 0,
       hasFlashlight: false,
       flashlightOn: false,
       leverPulled: false,
+      basementLeverPulled: false,
+      floorBroken: false,
       battery: 100,
       batteryDrainAccum: 0,
       collectedLetters: [],
@@ -1291,23 +1533,61 @@
     };
     camera.position.set(player.x, 1.65, player.z);
 
+    function dropToBasement() {
+      player.floor = 2;
+      player.x = FALL_FLOOR_CELL.c * CELL;
+      player.z = FALL_FLOOR_CELL.r * CELL;
+      audio.playFallDropSound();
+      showBanner(
+        '<strong>Floor Gave Way!</strong> You fell into the haunted basement—watch for coffins, ditches, shovels & a wall-phasing ghost. Find the basement lever (<strong>L</strong>) to open the stairs back up.',
+        5500
+      );
+    }
+
+    function climbStairsToUpperFloor() {
+      player.floor = 1;
+      player.x = STAIRS_RETURN_CELL.c * CELL;
+      player.z = STAIRS_RETURN_CELL.r * CELL;
+      audio.playSoftOvertChime();
+      showBanner('<strong>Climbed the Stairs!</strong> Back on Floor 1.', 3400);
+    }
+
     function pullSecretLeverIfNear() {
-      if (player.leverPulled || player.won || player.keypadOpen) return;
-      const lx = SECRET_LEVER_CELL.c * CELL;
-      const lz = SECRET_LEVER_CELL.r * CELL;
-      if (Math.hypot(player.x - lx, player.z - lz) < CELL * 0.95) {
-        player.leverPulled = true;
-        MAZE[SECRET_GATE_CELL.r][SECRET_GATE_CELL.c] = 0;
-        secretGateMesh.visible = false;
-        leverHandle.rotation.x = -0.45;
-        leverHandleMat.color.setHex(0x34d399);
-        leverHandleMat.emissive.setHex(0x10b981);
-        leverLight.color.setHex(0x34d399);
-        audio.playSoftOvertChime();
-        showBanner('<strong>Secret Lever Pulled!</strong> A hidden passage opened to the south—claim the letter inside.', 4200);
+      if (player.won || player.keypadOpen) return;
+
+      if (player.floor === 1 && !player.leverPulled) {
+        const lx = SECRET_LEVER_CELL.c * CELL;
+        const lz = SECRET_LEVER_CELL.r * CELL;
+        if (Math.hypot(player.x - lx, player.z - lz) < CELL * 0.95) {
+          player.leverPulled = true;
+          MAZE[SECRET_GATE_CELL.r][SECRET_GATE_CELL.c] = 0;
+          secretGateMesh.visible = false;
+          leverHandle.rotation.x = -0.45;
+          leverHandleMat.color.setHex(0x34d399);
+          leverHandleMat.emissive.setHex(0x10b981);
+          leverLight.color.setHex(0x34d399);
+          audio.playSoftOvertChime();
+          showBanner('<strong>Secret Lever Pulled!</strong> A hidden passage opened to the south—claim the letter inside.', 4200);
+        }
+      }
+
+      if (player.floor === 2 && !player.basementLeverPulled) {
+        const blx = BASEMENT_LEVER_CELL.c * CELL;
+        const blz = BASEMENT_LEVER_CELL.r * CELL;
+        if (Math.hypot(player.x - blx, player.z - blz) < CELL * 0.95) {
+          player.basementLeverPulled = true;
+          stairsBarrierMesh.visible = false;
+          bLeverHandle.rotation.x = -0.45;
+          bLeverHandleMat.color.setHex(0x34d399);
+          bLeverHandleMat.emissive.setHex(0x10b981);
+          basementLeverLight.color.setHex(0x34d399);
+          audio.playSoftOvertChime();
+          showBanner('<strong>Basement Lever Pulled!</strong> The barrier on the north stairwell (r1, c13) is open.', 4500);
+        }
       }
     }
 
+    const floorValEl = document.getElementById('floor-val');
     const batteryValEl = document.getElementById('battery-val');
     const lettersValEl = document.getElementById('letters-val');
     const collectedListEl = document.getElementById('collected-list');
@@ -1321,6 +1601,7 @@
     let keypadCooldownUntil = 0;
 
     function refreshHudStats(elapsedSec) {
+      floorValEl.textContent = player.floor === 2 ? '2 (Basement)' : '1 (Upper)';
       const pct = Math.max(0, Math.round(player.battery));
       batteryValEl.textContent = `${pct}%`;
       batteryValEl.classList.toggle('low', pct <= 20);
@@ -1421,10 +1702,13 @@
     function resetGame() {
       player.x = 1 * CELL;
       player.z = 1 * CELL;
+      player.floor = 1;
       player.yaw = 0;
       player.hasFlashlight = false;
       player.flashlightOn = false;
       player.leverPulled = false;
+      player.basementLeverPulled = false;
+      player.floorBroken = false;
       player.battery = 100;
       player.batteryDrainAccum = 0;
       player.collectedLetters = [];
@@ -1438,10 +1722,18 @@
 
       MAZE[SECRET_GATE_CELL.r][SECRET_GATE_CELL.c] = 3;
       secretGateMesh.visible = true;
+      fallTileMesh.visible = true;
+      stairsBarrierMesh.visible = true;
+
       leverHandle.rotation.x = 0.45;
       leverHandleMat.color.setHex(0xf59e0b);
       leverHandleMat.emissive.setHex(0xd97706);
       leverLight.color.setHex(0xf59e0b);
+
+      bLeverHandle.rotation.x = 0.45;
+      bLeverHandleMat.color.setHex(0xf59e0b);
+      bLeverHandleMat.emissive.setHex(0xd97706);
+      basementLeverLight.color.setHex(0xf59e0b);
 
       flashlight.intensity = 0;
       flashlightPickup.visible = true;
@@ -1452,7 +1744,7 @@
       for (const sp of spiders) {
         sp.x = sp.originX;
         sp.z = sp.originZ;
-        sp.group.position.set(sp.x, 0.02, sp.z);
+        sp.group.position.set(sp.x, sp.baseY, sp.z);
         sp.scatterTimer = 0;
       }
       for (const b of shortcutBarriers) {
@@ -1492,7 +1784,7 @@
       return dot > 0.72;
     }
 
-    function canMoveTo(nx, nz) {
+    function canMoveTo(nx, nz, grid = (player.floor === 2 ? BASEMENT_MAZE : MAZE)) {
       const minC = Math.floor((nx - PLAYER_R + CELL / 2) / CELL);
       const maxC = Math.floor((nx + PLAYER_R + CELL / 2) / CELL);
       const minR = Math.floor((nz - PLAYER_R + CELL / 2) / CELL);
@@ -1500,14 +1792,16 @@
 
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-          const tile = MAZE[r]?.[c];
+          const tile = grid[r]?.[c];
           if (tile === undefined || tile === 1 || tile === 3) return false;
         }
       }
 
-      for (const b of shortcutBarriers) {
-        if (!b.cleared && Math.hypot(nx - b.x, nz - b.z) < PLAYER_R + 0.85) {
-          return false;
+      if (player.floor === 1) {
+        for (const b of shortcutBarriers) {
+          if (!b.cleared && Math.hypot(nx - b.x, nz - b.z) < PLAYER_R + 0.85) {
+            return false;
+          }
         }
       }
       return true;
@@ -1575,11 +1869,12 @@
 
     const mini = document.getElementById('minimap');
     const mctx = mini.getContext('2d');
-    function drawMinimap(nearSpider, nowSec) {
-      const s = mini.width / MAZE.length;
+    function drawMinimap(nearDanger, nowSec) {
+      const activeGrid = player.floor === 2 ? BASEMENT_MAZE : MAZE;
+      const s = mini.width / activeGrid.length;
       mctx.clearRect(0, 0, mini.width, mini.height);
 
-      if (nearSpider) {
+      if (nearDanger) {
         const jx = (Math.random() - 0.5) * 8;
         const jy = (Math.random() - 0.5) * 8;
         mini.style.transform = `translate(${jx.toFixed(1)}px, ${jy.toFixed(1)}px)`;
@@ -1589,13 +1884,15 @@
         mini.style.opacity = '1';
       }
 
-      for (let r = 0; r < MAZE.length; r++) {
-        for (let c = 0; c < MAZE[r].length; c++) {
-          const tile = MAZE[r][c];
+      for (let r = 0; r < activeGrid.length; r++) {
+        for (let c = 0; c < activeGrid[r].length; c++) {
+          const tile = activeGrid[r][c];
           if (!player.hasFlashlight) {
             mctx.fillStyle = (tile === 1 || tile === 3) ? '#090b10' : '#020305';
           } else if (tile === 3) {
             mctx.fillStyle = '#3b82f6';
+          } else if (tile === 4) {
+            mctx.fillStyle = player.basementLeverPulled ? '#22c55e' : '#ef4444';
           } else {
             mctx.fillStyle = tile === 1 ? '#334155' : tile === 2 ? '#22c55e' : '#090b10';
           }
@@ -1603,22 +1900,39 @@
         }
       }
 
-      if (!player.leverPulled) {
-        mctx.fillStyle = '#f59e0b';
+      if (player.floor === 1) {
+        if (!player.floorBroken) {
+          mctx.fillStyle = '#d97706';
+          mctx.fillRect(FALL_FLOOR_CELL.c * s + s * 0.2, FALL_FLOOR_CELL.r * s + s * 0.2, s * 0.6, s * 0.6);
+        }
+        if (!player.leverPulled) {
+          mctx.fillStyle = '#f59e0b';
+          mctx.beginPath();
+          mctx.arc((SECRET_LEVER_CELL.c + 0.5) * s, (SECRET_LEVER_CELL.r + 0.5) * s, s * 0.24, 0, Math.PI * 2);
+          mctx.fill();
+        }
+        for (const b of shortcutBarriers) {
+          if (!b.cleared) {
+            mctx.fillStyle = 'rgba(248, 250, 252, 0.55)';
+            mctx.fillRect((b.x / CELL) * s, (b.z / CELL) * s, s, s);
+          }
+        }
+      } else {
+        if (!player.basementLeverPulled) {
+          mctx.fillStyle = '#f59e0b';
+          mctx.beginPath();
+          mctx.arc((BASEMENT_LEVER_CELL.c + 0.5) * s, (BASEMENT_LEVER_CELL.r + 0.5) * s, s * 0.24, 0, Math.PI * 2);
+          mctx.fill();
+        }
+        // Ghost on basement minimap
+        mctx.fillStyle = 'rgba(203, 213, 225, 0.85)';
         mctx.beginPath();
-        mctx.arc((SECRET_LEVER_CELL.c + 0.5) * s, (SECRET_LEVER_CELL.r + 0.5) * s, s * 0.24, 0, Math.PI * 2);
+        mctx.arc((ghostGroup.position.x / CELL + 0.5) * s, (ghostGroup.position.z / CELL + 0.5) * s, s * 0.28, 0, Math.PI * 2);
         mctx.fill();
       }
 
-      for (const b of shortcutBarriers) {
-        if (!b.cleared) {
-          mctx.fillStyle = 'rgba(248, 250, 252, 0.55)';
-          mctx.fillRect((b.x / CELL) * s, (b.z / CELL) * s, s, s);
-        }
-      }
-
       for (const lp of letterPickups) {
-        if (!lp.collected) {
+        if (!lp.collected && lp.floor === player.floor) {
           mctx.fillStyle = '#38bdf8';
           mctx.beginPath();
           mctx.arc((lp.x / CELL + 0.5) * s, (lp.z / CELL + 0.5) * s, s * 0.22, 0, Math.PI * 2);
@@ -1626,7 +1940,7 @@
         }
       }
 
-      if (!player.hasFlashlight) {
+      if (player.floor === 1 && !player.hasFlashlight) {
         mctx.fillStyle = '#fef08a';
         mctx.beginPath();
         mctx.arc((pickupX / CELL + 0.5) * s, (pickupZ / CELL + 0.5) * s, s * 0.25, 0, Math.PI * 2);
@@ -1645,7 +1959,7 @@
 
     function getShareLine() {
       const timeStr = player.escapeSeconds > 0 ? ` in ${formatTime(player.escapeSeconds)}` : '';
-      return `Completed Operation Φῶς (Light) in the 3D dungeon maze${timeStr}, spelled ΑΛΗΘΕΙΑ, and reached OvertPsyops.AI (@TLTHE5TH). Play free: tlthe5th.github.io/3d-maze #OvertPsyops`;
+      return `Completed Operation Φῶς (Light) across 2 dungeon floors${timeStr}, spelled ΑΛΗΘΕΙΑ, and reached OvertPsyops.AI (@TLTHE5TH). Play free: tlthe5th.github.io/3d-maze #OvertPsyops`;
     }
 
     document.getElementById('share-x-btn').addEventListener('click', () => {
@@ -1680,6 +1994,16 @@
         flashlightPickup.position.y = 0.95 + Math.sin(t * 3) * 0.08;
       }
 
+      // Ghost moves smoothly through walls in the basement
+      const ghostTargetX = (9.5 + Math.cos(t * 0.45) * 6.5) * CELL;
+      const ghostTargetZ = (9.5 + Math.sin(t * 0.37) * 6.5) * CELL;
+      const gdx = ghostTargetX - ghostGroup.position.x;
+      const gdz = ghostTargetZ - ghostGroup.position.z;
+      ghostGroup.position.x += gdx * Math.min(1, dt * 1.5);
+      ghostGroup.position.z += gdz * Math.min(1, dt * 1.5);
+      ghostGroup.position.y = BASEMENT_Y + 0.12 + Math.sin(t * 3.2) * 0.14;
+      ghostGroup.rotation.y = Math.atan2(gdx, gdz);
+
       for (const lp of letterPickups) {
         if (!lp.collected) {
           lp.mesh.lookAt(camera.position.x, lp.mesh.position.y, camera.position.z);
@@ -1692,13 +2016,14 @@
       for (const bp of batteryPickups) {
         if (!bp.collected) {
           bp.group.rotation.y = t * 2.2;
-          bp.group.position.y = 1.05 + Math.sin(t * 3.5) * 0.06;
+          bp.group.position.y = (bp.floor === 2 ? BASEMENT_Y + 1.05 : 1.05) + Math.sin(t * 3.5) * 0.06;
         }
       }
 
       let nearestSpiderDist = Infinity;
 
       for (const sp of spiders) {
+        if (sp.floor !== player.floor) continue;
         const distToPlayer = Math.hypot(sp.x - player.x, sp.z - player.z);
         if (distToPlayer < nearestSpiderDist) nearestSpiderDist = distToPlayer;
 
@@ -1732,26 +2057,31 @@
         }
       }
 
-      const nearSpider = !player.won && nearestSpiderDist < 4.6;
-      audio.setSpiderProximityTension(nearSpider);
+      const ghostDist = player.floor === 2
+        ? Math.hypot(ghostGroup.position.x - player.x, ghostGroup.position.z - player.z)
+        : Infinity;
+      const nearDanger = !player.won && (nearestSpiderDist < 4.6 || ghostDist < 4.2);
+      audio.setSpiderProximityTension(nearDanger);
 
-      for (const b of shortcutBarriers) {
-        if (b.cleared) continue;
-        const d = Math.hypot(player.x - b.x, player.z - b.z);
-        if (d < 2.3 && now - b.lastHintTime > 4500) {
-          b.lastHintTime = now;
-          showBanner(b.hint, 4200);
-        }
-        if (isInFlashlightBeam(b.x, b.z, 8.5)) {
-          b.burnProgress += dt * 1.35;
-          const scale = Math.max(0.05, 1 - b.burnProgress);
-          b.group.scale.set(scale, scale, 1);
-          if (b.burnProgress >= 1) {
-            b.cleared = true;
-            b.group.visible = false;
-            b.glow.intensity = 0;
-            audio.playBurnWebSound();
-            showBanner('Spiderweb wall cleared by the φῶς (light) — path open!', 2800);
+      if (player.floor === 1) {
+        for (const b of shortcutBarriers) {
+          if (b.cleared) continue;
+          const d = Math.hypot(player.x - b.x, player.z - b.z);
+          if (d < 2.3 && now - b.lastHintTime > 4500) {
+            b.lastHintTime = now;
+            showBanner(b.hint, 4200);
+          }
+          if (isInFlashlightBeam(b.x, b.z, 8.5)) {
+            b.burnProgress += dt * 1.35;
+            const scale = Math.max(0.05, 1 - b.burnProgress);
+            b.group.scale.set(scale, scale, 1);
+            if (b.burnProgress >= 1) {
+              b.cleared = true;
+              b.group.visible = false;
+              b.glow.intensity = 0;
+              audio.playBurnWebSound();
+              showBanner('Spiderweb wall cleared by the φῶς (light) — path open!', 2800);
+            }
           }
         }
       }
@@ -1775,11 +2105,43 @@
         if (canMoveTo(player.x + dx, player.z)) player.x += dx;
         if (canMoveTo(player.x, player.z + dz)) player.z += dz;
 
-        camera.position.set(player.x, 1.65, player.z);
+        // Check falling through weak floor near flashlight (r: 7, c: 8)
+        if (player.floor === 1) {
+          const fx = FALL_FLOOR_CELL.c * CELL;
+          const fz = FALL_FLOOR_CELL.r * CELL;
+          if (Math.hypot(player.x - fx, player.z - fz) < 1.15) {
+            player.floorBroken = true;
+            fallTileMesh.visible = false;
+            dropToBasement();
+          }
+        } else {
+          // Basement lever hint & stairwell back up
+          if (!player.basementLeverPulled) {
+            const blx = BASEMENT_LEVER_CELL.c * CELL;
+            const blz = BASEMENT_LEVER_CELL.r * CELL;
+            if (Math.hypot(player.x - blx, player.z - blz) < CELL * 0.95 && now - leverPromptTime > 4500) {
+              leverPromptTime = now;
+              showBanner('Basement Lever Spotted: Press <strong>L</strong> to pull it and open the stairs back up.', 4000);
+            }
+          }
+
+          const sx = BASEMENT_STAIRS_CELL.c * CELL;
+          const sz = BASEMENT_STAIRS_CELL.r * CELL;
+          if (Math.hypot(player.x - sx, player.z - sz) < 1.35) {
+            if (player.basementLeverPulled) {
+              climbStairsToUpperFloor();
+            } else if (now - leverPromptTime > 4500) {
+              leverPromptTime = now;
+              showBanner('Stairs Blocked: Pull the basement lever at (r5, c13) with <strong>L</strong> to open the way up.', 3800);
+            }
+          }
+        }
+
+        const floorBaseY = player.floor === 2 ? BASEMENT_Y : 0;
+        camera.position.set(player.x, floorBaseY + 1.65, player.z);
         camera.rotation.y = player.yaw;
 
-        // Secret lever proximity hint
-        if (!player.leverPulled) {
+        if (player.floor === 1 && !player.leverPulled) {
           const lx = SECRET_LEVER_CELL.c * CELL;
           const lz = SECRET_LEVER_CELL.r * CELL;
           if (Math.hypot(player.x - lx, player.z - lz) < CELL * 0.95 && now - leverPromptTime > 4500) {
@@ -1800,7 +2162,7 @@
           }
         }
 
-        if (!player.hasFlashlight && Math.hypot(player.x - pickupX, player.z - pickupZ) < 1.55) {
+        if (player.floor === 1 && !player.hasFlashlight && Math.hypot(player.x - pickupX, player.z - pickupZ) < 1.55) {
           player.hasFlashlight = true;
           player.flashlightOn = true;
           flashlightPickup.visible = false;
@@ -1814,7 +2176,7 @@
         }
 
         for (const bp of batteryPickups) {
-          if (!bp.collected && Math.hypot(player.x - bp.x, player.z - bp.z) < CELL * 0.95) {
+          if (!bp.collected && bp.floor === player.floor && Math.hypot(player.x - bp.x, player.z - bp.z) < CELL * 0.95) {
             bp.collected = true;
             bp.group.visible = false;
             bp.light.intensity = 0;
@@ -1825,7 +2187,7 @@
         }
 
         for (const lp of letterPickups) {
-          if (!lp.collected && Math.hypot(player.x - lp.x, player.z - lp.z) < CELL * 0.95) {
+          if (!lp.collected && lp.floor === player.floor && Math.hypot(player.x - lp.x, player.z - lp.z) < CELL * 0.95) {
             lp.collected = true;
             lp.mesh.visible = false;
             lp.light.intensity = 0;
@@ -1835,52 +2197,58 @@
           }
         }
 
-        for (const pl of activePlaques) {
-          const distPlaque = Math.hypot(player.x - pl.x, player.z - pl.z);
-          if (distPlaque < 2.2) {
-            if (!pl.read) {
-              pl.read = true;
-              pl.lastReadBannerTime = now;
-              if (pl.type === 'overt') {
-                player.battery = Math.min(100, player.battery + pl.outcome.batteryDelta);
-                audio.playSoftOvertChime();
-                showBanner(`<strong>Overt Plaque:</strong> "${pl.text}"<br><span style="color:#67e8f9">${pl.outcome.trapNote}</span>`, 4500);
-              } else {
-                audio.playPickupClick();
-                showBanner(`<strong>Wall Plaque:</strong> "${pl.text}"`, 4200);
+        if (player.floor === 1) {
+          for (const pl of activePlaques) {
+            const distPlaque = Math.hypot(player.x - pl.x, player.z - pl.z);
+            if (distPlaque < 2.2) {
+              if (!pl.read) {
+                pl.read = true;
+                pl.lastReadBannerTime = now;
+                if (pl.type === 'overt') {
+                  player.battery = Math.min(100, player.battery + pl.outcome.batteryDelta);
+                  audio.playSoftOvertChime();
+                  showBanner(`<strong>Overt Plaque:</strong> "${pl.text}"<br><span style="color:#67e8f9">${pl.outcome.trapNote}</span>`, 4500);
+                } else {
+                  audio.playPickupClick();
+                  showBanner(`<strong>Wall Plaque:</strong> "${pl.text}"`, 4200);
+                }
+              } else if (now - pl.lastReadBannerTime > 6500) {
+                pl.lastReadBannerTime = now;
+                showBanner(`<strong>Wall Plaque:</strong> "${pl.text}"`, 3500);
               }
-            } else if (now - pl.lastReadBannerTime > 6500) {
-              pl.lastReadBannerTime = now;
-              showBanner(`<strong>Wall Plaque:</strong> "${pl.text}"`, 3500);
             }
-          }
 
-          if (pl.type === 'covert' && !pl.followedTriggered && Math.hypot(player.x - pl.followX, player.z - pl.followZ) < 1.35) {
-            pl.followedTriggered = true;
-            player.covertFollowed += 1;
-            player.battery = Math.max(0, player.battery + pl.outcome.batteryDelta);
-            audio.playCovertAlert();
-            showBanner(`<strong>Covert Trap!</strong> ${pl.outcome.trapNote}`, 4500);
+            if (pl.type === 'covert' && !pl.followedTriggered && Math.hypot(player.x - pl.followX, player.z - pl.followZ) < 1.35) {
+              pl.followedTriggered = true;
+              player.covertFollowed += 1;
+              player.battery = Math.max(0, player.battery + pl.outcome.batteryDelta);
+              audio.playCovertAlert();
+              showBanner(`<strong>Covert Trap!</strong> ${pl.outcome.trapNote}`, 4500);
 
-            if (pl.outcome.spiderSurge) {
-              for (const sp of spiders) {
-                if (Math.hypot(sp.x - player.x, sp.z - player.z) < 18) {
-                  const toPX = player.x - sp.x;
-                  const toPZ = player.z - sp.z;
-                  const len = Math.hypot(toPX, toPZ) || 1;
-                  const stepX = (toPX / len) * 2.2;
-                  const stepZ = (toPZ / len) * 2.2;
-                  if (canMoveTo(sp.x + stepX, sp.z)) sp.x += stepX;
-                  if (canMoveTo(sp.x, sp.z + stepZ)) sp.z += stepZ;
+              if (pl.outcome.spiderSurge) {
+                for (const sp of spiders) {
+                  if (sp.floor === 1 && Math.hypot(sp.x - player.x, sp.z - player.z) < 18) {
+                    const toPX = player.x - sp.x;
+                    const toPZ = player.z - sp.z;
+                    const len = Math.hypot(toPX, toPZ) || 1;
+                    const stepX = (toPX / len) * 2.2;
+                    const stepZ = (toPZ / len) * 2.2;
+                    if (canMoveTo(sp.x + stepX, sp.z, MAZE)) sp.x += stepX;
+                    if (canMoveTo(sp.x, sp.z + stepZ, MAZE)) sp.z += stepZ;
+                  }
                 }
               }
             }
           }
         }
 
-        const distToExit = Math.hypot(player.x - exitPos.x, player.z - exitPos.z);
+        const distToExit = player.floor === 1
+          ? Math.hypot(player.x - exitPos.x, player.z - exitPos.z)
+          : Infinity;
         const batteryFactor = player.battery > 0 ? 1 : 0.15;
-        const lightFactor = THREE.MathUtils.clamp(1 - (distToExit / (SANCTUARY_RADIUS + 4)), 0, 1);
+        const lightFactor = player.floor === 1
+          ? THREE.MathUtils.clamp(1 - (distToExit / (SANCTUARY_RADIUS + 4)), 0, 1)
+          : 0;
 
         scene.background.lerpColors(pitchBlack, brightBg, lightFactor * 0.8);
         scene.fog.color.copy(scene.background);
@@ -1907,7 +2275,7 @@
         refreshHudStats(player.startTime ? (now - player.startTime) / 1000 : 0);
       }
 
-      drawMinimap(nearSpider, t);
+      drawMinimap(nearDanger, t);
       renderer.render(scene, camera);
     }
 
