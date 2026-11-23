@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>3D Dungeon Labyrinth — Operation Φῶς (Light) • OvertPsyops.AI @TLTHE5TH</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { overflow: hidden; background: #000000; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { overflow: hidden; background: #000000; font-family: system-ui, -apple-system, sans-serif; color: #fff; touch-action: none; }
     #hud {
       position: fixed; top: 14px; left: 14px; z-index: 10;
       background: rgba(6, 8, 12, 0.88); border: 1px solid rgba(255,255,255,0.18);
@@ -26,7 +26,7 @@
       position: fixed; top: 132px; left: 50%; transform: translateX(-50%); z-index: 15;
       display: none; background: rgba(10, 15, 28, 0.95);
       border: 1px solid rgba(250, 204, 21, 0.65); box-shadow: 0 0 24px rgba(250, 204, 21, 0.25);
-      padding: 12px 20px; border-radius: 10px; max-width: 620px; text-align: center;
+      padding: 12px 20px; border-radius: 10px; max-width: 620px; width: calc(100% - 28px); text-align: center;
       font-size: 13.5px; line-height: 1.5; color: #fef9c3; pointer-events: none;
     }
     #minimap {
@@ -38,6 +38,7 @@
       position: fixed; inset: 0; z-index: 20;
       display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
       background: rgba(2, 3, 6, 0.95); text-align: center; padding: 28px 20px; overflow-y: auto;
+      touch-action: pan-y;
     }
     #overlay h1 { font-size: 2rem; margin-bottom: 8px; }
     #overlay p { color: #cbd5e1; max-width: 640px; margin-bottom: 12px; line-height: 1.5; font-size: 14px; }
@@ -72,6 +73,7 @@
       position: fixed; inset: 0; z-index: 25;
       display: none; flex-direction: column; align-items: center; justify-content: center;
       background: rgba(3, 6, 14, 0.94); padding: 20px; text-align: center; overflow-y: auto;
+      touch-action: pan-y;
     }
     .modal-card {
       background: #0b1120; border: 1px solid rgba(148, 163, 184, 0.35);
@@ -140,11 +142,51 @@
       display: none; margin: 10px auto; max-width: 560px; width: 100%;
       border-radius: 10px; border: 1px solid rgba(56, 189, 248, 0.45);
     }
+
+    #mobile-controls {
+      display: none; position: fixed; inset: auto 10px 12px 10px; z-index: 12;
+      justify-content: space-between; align-items: flex-end; pointer-events: none;
+    }
+    .pad-cluster {
+      display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);
+      gap: 6px; pointer-events: auto;
+    }
+    .pad-btn {
+      background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(148, 163, 184, 0.38);
+      border-radius: 10px; color: #f8fafc; font-size: 15px; font-weight: 700;
+      padding: 0; display: flex; align-items: center; justify-content: center;
+      user-select: none;
+    }
+    .pad-btn.active, .pad-btn:active { background: rgba(37, 99, 235, 0.85); border-color: #93c5fd; }
+    .pad-spacer { visibility: hidden; }
+    .action-stack {
+      display: flex; flex-direction: column; gap: 8px; pointer-events: auto;
+    }
+    .mob-act-btn {
+      background: rgba(15, 23, 42, 0.86); border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 10px; color: #fef08a; font-size: 12px; font-weight: 700;
+      padding: 10px 12px; min-width: 84px; text-align: center; user-select: none;
+    }
+    .mob-act-btn:active { background: rgba(37, 99, 235, 0.85); }
+
+    @media (hover: none) and (pointer: coarse), (max-width: 820px) {
+      #mobile-controls.active-touch { display: flex; }
+      #hud {
+        top: 8px; left: 8px; right: 116px; max-width: none;
+        padding: 7px 10px; font-size: 11px; line-height: 1.3;
+      }
+      #hud .stats-row { gap: 6px; margin-top: 4px; padding-top: 4px; font-size: 10.5px; }
+      #status { display: none; }
+      #minimap { top: 8px; right: 8px; width: 102px !important; height: 102px !important; }
+      #banner { top: 96px; font-size: 12.5px; padding: 9px 12px; }
+      #overlay h1 { font-size: 1.5rem; }
+      .scale-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <div id="hud">
-    <div><strong>Controls:</strong> WASD/Arrows Walk • Mouse (Up/Down/Left/Right) or Q/E Turn • <strong>E/L</strong> Interact/Lever • <strong>F</strong> Flashlight • <strong>H</strong> Laugh • <strong>M</strong> Mute • <strong>Esc</strong> Close Prompt</div>
+    <div><strong>Controls:</strong> WASD/Arrows Walk • Mouse or Q/E Turn (or Drag/Touch Pads on Phone) • <strong>E/L</strong> Lever • <strong>F</strong> Light • <strong>H</strong> Laugh • <strong>M</strong> Mute</div>
     <div class="stats-row">
       <div>Floor: <span id="floor-val">1 (Upper)</span></div>
       <div>Level: <span id="level-val">1: Awareness</span></div>
@@ -159,6 +201,39 @@
 
   <div id="banner"></div>
   <canvas id="minimap" width="190" height="190"></canvas>
+
+  <div id="mobile-controls" class="active-touch">
+    <div class="pad-cluster" aria-label="Movement Pad">
+      <div class="pad-spacer"></div>
+      <button type="button" class="pad-btn" data-hold="moveForward">▲</button>
+      <div class="pad-spacer"></div>
+      <button type="button" class="pad-btn" data-hold="moveLeft">◀</button>
+      <button type="button" class="pad-btn" data-hold="moveBack">▼</button>
+      <button type="button" class="pad-btn" data-hold="moveRight">▶</button>
+      <div class="pad-spacer"></div>
+      <div class="pad-spacer"></div>
+      <div class="pad-spacer"></div>
+    </div>
+
+    <div class="action-stack" aria-label="Actions">
+      <button type="button" class="mob-act-btn" id="mob-light-btn">🔦 Light (F)</button>
+      <button type="button" class="mob-act-btn" id="mob-lever-btn">⚙️ Lever (L)</button>
+      <button type="button" class="mob-act-btn" id="mob-laugh-btn">😂 Laugh (H)</button>
+      <button type="button" class="mob-act-btn" id="mob-pause-btn">⏸ Menu</button>
+    </div>
+
+    <div class="pad-cluster" aria-label="Turn and Look Pad">
+      <div class="pad-spacer"></div>
+      <button type="button" class="pad-btn" data-hold="lookUp">UP</button>
+      <div class="pad-spacer"></div>
+      <button type="button" class="pad-btn" data-hold="turnLeft">↶</button>
+      <button type="button" class="pad-btn" data-hold="lookDown">DN</button>
+      <button type="button" class="pad-btn" data-hold="turnRight">↷</button>
+      <div class="pad-spacer"></div>
+      <div class="pad-spacer"></div>
+      <div class="pad-spacer"></div>
+    </div>
+  </div>
 
   <div id="room-modal" class="modal-backdrop">
     <div class="modal-card">
@@ -281,6 +356,8 @@
 
   <script type="module">
     import * as THREE from 'three';
+
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || window.matchMedia('(pointer: coarse)').matches;
 
     const ART_FILES = [
       'art1.jpg',
@@ -1900,6 +1977,15 @@
     let activeRoomNode = null;
     let lastTriggeredRoomId = null;
 
+    function requestDesktopPointerLock() {
+      if (!isTouchDevice && renderer.domElement.requestPointerLock) {
+        try {
+          const res = renderer.domElement.requestPointerLock();
+          if (res && typeof res.catch === 'function') res.catch(() => {});
+        } catch {}
+      }
+    }
+
     function renderConfidenceButtons(onSelect) {
       const grid = document.createElement('div');
       grid.className = 'scale-grid';
@@ -2210,7 +2296,7 @@
       player.modalOpen = false;
       roomModalEl.style.display = 'none';
       if (!player.won) {
-        renderer.domElement.requestPointerLock?.();
+        requestDesktopPointerLock();
       }
     }
 
@@ -2235,7 +2321,7 @@
       player.modalOpen = false;
       keypadModalEl.style.display = 'none';
       if (!player.won) {
-        renderer.domElement.requestPointerLock?.();
+        requestDesktopPointerLock();
       }
     }
 
@@ -2508,6 +2594,7 @@
           leverLight.color.setHex(0x34d399);
           audio.playSoftOvertChime();
           showBanner('<strong>Secret Lever Pulled!</strong> A hidden passage opened to the south.', 4000);
+          return;
         }
       }
       if (player.floor === 2 && !player.basementLeverPulled) {
@@ -2522,8 +2609,51 @@
           basementLeverLight.color.setHex(0x34d399);
           audio.playSoftOvertChime();
           showBanner('<strong>Basement Lever Pulled!</strong> The barrier on the north stairwell (r1, c13) is open.', 4200);
+          return;
         }
       }
+      showBanner('Move closer to an amber lever (or stairwell) to use it.', 2000);
+    }
+
+    function toggleFlashlightAction() {
+      if (!player.hasFlashlight || player.won) {
+        showBanner('Find the flashlight first at (r7, c9) on Floor 1.', 2600);
+        return;
+      }
+      if (player.battery <= 0 && !player.emergencySparkUsed) {
+        player.emergencySparkUsed = true;
+        player.battery = 10;
+        player.flashlightOn = true;
+        audio.playPickupClick();
+        showBanner('Emergency capacitor spark gave +10% flashlight charge—find a battery cell!', 3600);
+        return;
+      }
+      if (player.battery <= 0) {
+        player.flashlightOn = false;
+        showBanner('Flashlight battery is at 0%—find a battery cell!', 3000);
+        return;
+      }
+      player.flashlightOn = !player.flashlightOn;
+      audio.playPickupClick();
+    }
+
+    function triggerLaughAction() {
+      if (player.won) return;
+      audio.playLaughChime();
+      for (const sp of spiders) {
+        if (Math.hypot(sp.x - player.x, sp.z - player.z) < 16) sp.scatterTimer = 3.0;
+      }
+      showBanner('😂 You laughed! Nearby spiders scatter in the dark.', 2600);
+    }
+
+    function openPauseMenu() {
+      if (player.won || player.modalOpen) return;
+      audio.stopCreepyMusic(0.2);
+      sanctuaryLinksEl.style.display = 'none';
+      document.getElementById('overlay-title').textContent = 'Paused';
+      document.getElementById('overlay-text').textContent = 'Tap Resume to return to Operation Φῶς (Light).';
+      startBtn.textContent = 'Resume';
+      overlay.style.display = 'flex';
     }
 
     function isInFlashlightBeam(targetX, targetZ, maxDist) {
@@ -2559,6 +2689,83 @@
     }
 
     const keys = {};
+    const touchHold = {
+      moveForward: false,
+      moveBack: false,
+      moveLeft: false,
+      moveRight: false,
+      turnLeft: false,
+      turnRight: false,
+      lookUp: false,
+      lookDown: false
+    };
+
+    document.querySelectorAll('[data-hold]').forEach((btn) => {
+      const act = btn.dataset.hold;
+      const onDown = (e) => {
+        e.preventDefault();
+        audio.ensureContext();
+        touchHold[act] = true;
+        btn.classList.add('active');
+      };
+      const onUp = (e) => {
+        e.preventDefault();
+        touchHold[act] = false;
+        btn.classList.remove('active');
+      };
+      btn.addEventListener('pointerdown', onDown);
+      btn.addEventListener('pointerup', onUp);
+      btn.addEventListener('pointercancel', onUp);
+      btn.addEventListener('pointerleave', onUp);
+    });
+
+    document.getElementById('mob-light-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      audio.ensureContext();
+      toggleFlashlightAction();
+    });
+    document.getElementById('mob-lever-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      audio.ensureContext();
+      pullSecretLeverIfNear();
+    });
+    document.getElementById('mob-laugh-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      audio.ensureContext();
+      triggerLaughAction();
+    });
+    document.getElementById('mob-pause-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      openPauseMenu();
+    });
+
+    let dragLookId = null;
+    let lastDragX = 0;
+    let lastDragY = 0;
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      audio.ensureContext();
+      if (player.modalOpen || player.won) return;
+      if (dragLookId === null) {
+        dragLookId = e.pointerId;
+        lastDragX = e.clientX;
+        lastDragY = e.clientY;
+      }
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== dragLookId || player.modalOpen) return;
+      const dx = e.clientX - lastDragX;
+      const dy = e.clientY - lastDragY;
+      lastDragX = e.clientX;
+      lastDragY = e.clientY;
+      player.yaw -= dx * 0.0055;
+      player.pitch = THREE.MathUtils.clamp(player.pitch - dy * 0.0045, -1.25, 1.25);
+    });
+    const endDrag = (e) => {
+      if (e.pointerId === dragLookId) dragLookId = null;
+    };
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Escape' && player.modalOpen) {
         e.preventDefault();
@@ -2574,28 +2781,10 @@
         pullSecretLeverIfNear();
       }
       if (e.code === 'KeyH' && !player.won) {
-        audio.playLaughChime();
-        for (const sp of spiders) {
-          if (Math.hypot(sp.x - player.x, sp.z - player.z) < 16) sp.scatterTimer = 3.0;
-        }
-        showBanner('😂 You laughed! Nearby spiders scatter in the dark.', 2600);
+        triggerLaughAction();
       }
       if (e.code === 'KeyF' && player.hasFlashlight && !player.won) {
-        if (player.battery <= 0 && !player.emergencySparkUsed) {
-          player.emergencySparkUsed = true;
-          player.battery = 10;
-          player.flashlightOn = true;
-          audio.playPickupClick();
-          showBanner('Emergency capacitor spark gave +10% flashlight charge—find a battery cell!', 3600);
-          return;
-        }
-        if (player.battery <= 0) {
-          player.flashlightOn = false;
-          showBanner('Flashlight battery is at 0%—find a battery cell!', 3000);
-          return;
-        }
-        player.flashlightOn = !player.flashlightOn;
-        audio.playPickupClick();
+        toggleFlashlightAction();
       }
       if (e.code === 'KeyM') {
         audio.toggleMute();
@@ -2614,17 +2803,12 @@
         audio.startCreepyMusic();
       }
       overlay.style.display = 'none';
-      renderer.domElement.requestPointerLock?.();
+      requestDesktopPointerLock();
     });
 
     document.addEventListener('pointerlockchange', () => {
-      if (document.pointerLockElement !== renderer.domElement && !player.won && !player.modalOpen) {
-        audio.stopCreepyMusic(0.2);
-        sanctuaryLinksEl.style.display = 'none';
-        document.getElementById('overlay-title').textContent = 'Paused';
-        document.getElementById('overlay-text').textContent = 'Click Resume to return to Operation Φῶς (Light).';
-        startBtn.textContent = 'Resume';
-        overlay.style.display = 'flex';
+      if (!isTouchDevice && document.pointerLockElement !== renderer.domElement && !player.won && !player.modalOpen && overlay.style.display === 'none') {
+        openPauseMenu();
       }
     });
 
@@ -2896,14 +3080,16 @@
         player.reach += (targetReach - player.reach) * Math.min(1, dt * 4);
 
         const turnSpeed = 2.2;
-        if (keys['KeyQ']) player.yaw += turnSpeed * dt;
-        if (keys['KeyE']) player.yaw -= turnSpeed * dt;
+        if (keys['KeyQ'] || touchHold.turnLeft) player.yaw += turnSpeed * dt;
+        if (keys['KeyE'] || touchHold.turnRight) player.yaw -= turnSpeed * dt;
+        if (touchHold.lookUp) player.pitch = THREE.MathUtils.clamp(player.pitch + 1.5 * dt, -1.25, 1.25);
+        if (touchHold.lookDown) player.pitch = THREE.MathUtils.clamp(player.pitch - 1.5 * dt, -1.25, 1.25);
 
         let forward = 0, strafe = 0;
-        if (keys['KeyW'] || keys['ArrowUp']) forward += 1;
-        if (keys['KeyS'] || keys['ArrowDown']) forward -= 1;
-        if (keys['KeyD'] || keys['ArrowRight']) strafe += 1;
-        if (keys['KeyA'] || keys['ArrowLeft']) strafe -= 1;
+        if (keys['KeyW'] || keys['ArrowUp'] || touchHold.moveForward) forward += 1;
+        if (keys['KeyS'] || keys['ArrowDown'] || touchHold.moveBack) forward -= 1;
+        if (keys['KeyD'] || keys['ArrowRight'] || touchHold.moveRight) strafe += 1;
+        if (keys['KeyA'] || keys['ArrowLeft'] || touchHold.moveLeft) strafe -= 1;
 
         const speed = 5.6 * dt;
         const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
@@ -2927,7 +3113,7 @@
             const blz = BASEMENT_LEVER_CELL.r * CELL;
             if (Math.hypot(player.x - blx, player.z - blz) < CELL * 0.95 && now - leverPromptTime > 4500) {
               leverPromptTime = now;
-              showBanner('Basement Lever Spotted: Press <strong>L</strong> to pull it and open the stairs back up.', 4000);
+              showBanner('Basement Lever Spotted: Tap <strong>Lever (L)</strong> to pull it and open the stairs back up.', 4000);
             }
           }
           const sx = BASEMENT_STAIRS_CELL.c * CELL;
@@ -2937,7 +3123,7 @@
               climbStairsToUpperFloor();
             } else if (now - leverPromptTime > 4500) {
               leverPromptTime = now;
-              showBanner('Stairs Blocked: Pull the basement lever at (r5, c13) with <strong>L</strong> to open the way up.', 3800);
+              showBanner('Stairs Blocked: Pull the basement lever at (r5, c13) with <strong>Lever (L)</strong> to open the way up.', 3800);
             }
           }
         }
@@ -2952,7 +3138,7 @@
           const lz = SECRET_LEVER_CELL.r * CELL;
           if (Math.hypot(player.x - lx, player.z - lz) < CELL * 0.95 && now - leverPromptTime > 4500) {
             leverPromptTime = now;
-            showBanner('Amber Lever Spotted: Press <strong>L</strong> to pull it and open the sealed passage to the south.', 4000);
+            showBanner('Amber Lever Spotted: Tap <strong>Lever (L)</strong> to pull it and open the sealed passage to the south.', 4000);
           }
         }
 
@@ -2963,7 +3149,7 @@
             player.battery = Math.max(0, player.battery - 1);
             if (player.battery === 0) {
               player.flashlightOn = false;
-              showBanner('Battery at 0%! Press <strong>F</strong> for an emergency spark or find a battery cell.', 4200);
+              showBanner('Battery at 0%! Tap <strong>Light (F)</strong> for an emergency spark or find a battery cell.', 4200);
             }
           }
         }
@@ -2975,7 +3161,7 @@
           pickupBeaconLight.intensity = 0;
           audio.playPickupClick();
           showBanner(
-            '<strong>Flashlight Found!</strong><br>Ψαλμοί (Psalms) 118:105: Your Λόγος (Word/Logic/Reason) is a λύχνος (lamp) to my feet and a φῶς (light) to my path. Press <strong>F</strong> to toggle.',
+            '<strong>Flashlight Found!</strong><br>Ψαλμοί (Psalms) 118:105: Your Λόγος (Word/Logic/Reason) is a λύχνος (lamp) to my feet and a φῶς (light) to my path. Tap <strong>Light (F)</strong> to toggle.',
             5500
           );
         }
