@@ -1,6 +1,12 @@
 # Overt Psyops 3-D Maze by Tommy Richards (@TLTHE5TH)
 
-A two-floor 3D browser labyrinth and discernment adventure built with Three.js and WebAudio, pairing dark corridor exploration with interactive chambers inspired by **#OvertPsyops** and **OvertPsyops.AI**.
+**[Play Live Demo](https://tlthe5th.github.io/3d-maze/)** · Two-floor 3D browser labyrinth and discernment adventure built with Three.js and WebAudio, pairing dark corridor exploration with interactive chambers inspired by **#OvertPsyops** and **OvertPsyops.AI**.
+
+| 3D Maze View 1 | 3D Maze View 2 |
+| :---: | :---: |
+| ![Overt Psyops 3-D Maze Screenshot 1](assets/maze-1.png) | ![Overt Psyops 3-D Maze Screenshot 2](assets/maze-2.png) |
+
+---
 
 ## Overview
 
@@ -24,6 +30,8 @@ Navigate pitch-black upper and basement corridors, locate the flashlight, test c
   * **Seeds:** Play the shared **Daily Maze**, a **Random Seed**, or enter a **Custom Seed**.
   * **Cards, Badges & Share Card:** Collect Greek Word Cards (`ἀλήθεια`, `φῶς`, `λόγος`, `πίστις`, `συνείδησις`, `κοινά`) and earn badges saved in `localStorage`, then generate a shareable escape image card for **@TLTHE5TH** and **#OvertPsyops**.
 
+---
+
 ## Controls
 
 * **Move:** `W A S D` or `Arrow Keys`
@@ -33,10 +41,15 @@ Navigate pitch-black upper and basement corridors, locate the flashlight, test c
 * **Laugh (Scatter Nearby Spiders):** `H`
 * **Mute / Unmute Audio:** `M`
 
+---
+
 ## Artwork & Files
 
 * `index.html`: Complete self-contained 3D game, audio engine, room modals, HUD, minimap, and escape share card generator.
+* `assets/maze-1.png`, `assets/maze-2.png`: Repository preview screenshots embedded in `README.md`.
 * Optional wall art images placed alongside `index.html`: `art1.jpg`, `art2.jpg`, `art3.jpg`, `art4.jpg`, `art5.jpg` (falls back to a procedural canvas texture if an image file is absent).
+
+---
 
 ## Links & Attribution
 
